@@ -33,7 +33,7 @@ func main() {
 	port := os.Getenv("PORT")
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/feed/top", topItems)
-	http.ListenAndServe("localhost:"+port, nil)
+	http.ListenAndServe(":"+port, nil)
 }
 
 var myClient = &http.Client{Timeout: 10 * time.Second}
