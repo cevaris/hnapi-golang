@@ -1,0 +1,6 @@
+{
+	"ImportPath": "github.com/cevaris/hnapi",
+	"GoVersion": "go1.12",
+	"GodepVersion": "v80",
+	"Deps": []
+}
