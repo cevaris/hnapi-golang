@@ -11,8 +11,7 @@ import (
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	hydrateTopItems()
-	io.WriteString(w, "Hellow World!")
+	io.WriteString(w, "Hello World!")
 }
 
 func topItems(w http.ResponseWriter, r *http.Request) {
@@ -28,12 +27,12 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
 func main() {
+	domain := getenv("DOMAIN", "0.0.0.0")
 	port := os.Getenv("PORT")
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/feed/top", topItems)
-	http.ListenAndServe(":"+port, nil)
+	http.ListenAndServe(domain+":"+port, nil)
 }
 
 var myClient = &http.Client{Timeout: 10 * time.Second}
@@ -61,4 +60,11 @@ func hydrateTopItems() ([]int, error) {
 	}
 
 	return itemIds, nil
+}
+
+func getenv(key, orElse string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return orElse
 }
