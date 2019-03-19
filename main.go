@@ -43,14 +43,14 @@ func items(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("found params", idsStr)
 
 	strItemIds := strings.Split(idsStr, ",")
-	itemIds := make([]int, len(strItemIds))
-	for i, s := range strItemIds {
+	itemIds := make([]int, 0)
+	for _, s := range strItemIds {
 		num, err := strconv.ParseInt(s, 10, 32)
 		if err != nil {
 			fmt.Println("failed to parse " + s)
 			continue
 		}
-		itemIds[i] = int(num)
+		itemIds = append(itemIds, int(num))
 	}
 	fmt.Println("parsed ids", itemIds)
 
@@ -59,8 +59,8 @@ func items(w http.ResponseWriter, r *http.Request) {
 
 	itemChan, errChan := repo.Hydrate(ctx, itemIds)
 
-	items := make([]repo.Item, len(itemIds))
-	for i := range itemIds {
+	items := make([]repo.Item, 0)
+	for range itemIds {
 		select {
 		case err, ok := <-errChan:
 			fmt.Println("failed to hydrate item: ", err, ok)
@@ -73,7 +73,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("should not happen")
 				continue
 			}
-			items[i] = r
+			items = append(items, r)
 		}
 	}
 
