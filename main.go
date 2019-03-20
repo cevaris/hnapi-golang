@@ -40,7 +40,19 @@ func items(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing ids parameter", 400)
 		return
 	}
-	fmt.Println("found params", idsStr)
+	fmt.Println("found id params", idsStr)
+
+	var prettyJSON = false
+	prettyJSONStr := r.URL.Query().Get("pretty")
+	if len(prettyJSONStr) != 0 {
+		value, err := strconv.ParseBool(prettyJSONStr)
+		if err != nil {
+			http.Error(w, "invalid pretty value "+prettyJSONStr, 400)
+			return
+		}
+		fmt.Println("found pretty param", prettyJSON)
+		prettyJSON = value
+	}
 
 	strItemIds := strings.Split(idsStr, ",")
 	itemIds := make([]int, 0)
@@ -58,6 +70,8 @@ func items(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	itemChan, errChan := repo.Hydrate(ctx, itemIds)
+	defer close(itemChan)
+	defer close(errChan)
 
 	items := make([]repo.Item, 0)
 	for range itemIds {
@@ -81,11 +95,18 @@ func items(w http.ResponseWriter, r *http.Request) {
 		Data: items,
 	}
 
-	b, err := json.MarshalIndent(response, "", "    ")
+	b, err := marshal(response, prettyJSON)
 	if err != nil {
 		fmt.Println("failed to serialize json:", err)
 	}
 	w.Write(b)
+}
+
+func marshal(data interface{}, prettyJSON bool) ([]byte, error) {
+	if prettyJSON {
+		return json.MarshalIndent(data, "", "    ")
+	}
+	return json.Marshal(data)
 }
 
 func main() {
