@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,13 @@ import (
 
 	"github.com/cevaris/hnapi/repo"
 )
+
+// APIResponse wrapper for http responses
+type APIResponse struct {
+	Status  string        `json:"status,omitempty"`
+	Message string        `json:"message,omitempty"`
+	Data    []interface{} `json:"data,omitempty"`
+}
 
 func hello(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Hello World!")
@@ -34,37 +42,85 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func requiredHTTPParam(w http.ResponseWriter, r *http.Request, paramName string) string {
+	strValue := r.URL.Query().Get(paramName)
+	if len(strValue) == 0 {
+		http.Error(w, fmt.Sprintf("missing %s parameter", paramName), 400)
+	} else {
+		fmt.Println(fmt.Sprintf("found %s=%v", paramName, strValue))
+	}
+	return strValue
+}
+
+func getSlice(r *http.Request, paramName string) ([]int, error) {
+	value := r.URL.Query().Get(paramName)
+	if len(value) > 0 {
+		listOfStrings := strings.Split(value, ",")
+		slice := make([]int, 0)
+		for _, str := range listOfStrings {
+			num, err := strconv.ParseInt(str, 10, 32)
+			if err != nil {
+				fmt.Println("failed to parse " + str)
+				return nil, fmt.Errorf("failed to parse '%s', found in %v", str, listOfStrings)
+			}
+			slice = append(slice, int(num))
+		}
+		fmt.Println("parsed slice", slice)
+		return slice, nil
+	}
+
+	return nil, errors.New(paramName + " parameter not present or contains no value")
+}
+
+var serverError = APIResponse{
+	Status:  "error",
+	Message: "server error",
+}
+var serverErrorJSONBytes, _ = marshal(serverError, true)
+var serverErrorJSON = string(serverErrorJSONBytes)
+
 func items(w http.ResponseWriter, r *http.Request) {
-	idsStr := r.URL.Query().Get("ids")
-	if len(strings.Trim(idsStr, " ")) == 0 {
-		http.Error(w, "missing ids parameter", 400)
+	itemIds, err := getSlice(r, "ids")
+	if err != nil {
+		response := APIResponse{Status: "error", Message: err.Error()}
+		b, err := marshal(response, true)
+		if err != nil {
+			fmt.Println("failed to serialize json ", err, "for", response)
+			http.Error(w, serverErrorJSON, 500)
+			return
+		}
+		http.Error(w, string(b), 400)
 		return
 	}
-	fmt.Println("found id params", idsStr)
 
 	var prettyJSON = false
 	prettyJSONStr := r.URL.Query().Get("pretty")
 	if len(prettyJSONStr) != 0 {
 		value, err := strconv.ParseBool(prettyJSONStr)
 		if err != nil {
-			http.Error(w, "invalid pretty value "+prettyJSONStr, 400)
+			response := APIResponse{Status: "error", Message: err.Error()}
+			b, err := marshal(response, true)
+			if err != nil {
+				fmt.Println("failed to serialize json:", err)
+			}
+			http.Error(w, string(b), 400)
 			return
 		}
 		fmt.Println("found pretty param", prettyJSON)
 		prettyJSON = value
 	}
 
-	strItemIds := strings.Split(idsStr, ",")
-	itemIds := make([]int, 0)
-	for _, s := range strItemIds {
-		num, err := strconv.ParseInt(s, 10, 32)
-		if err != nil {
-			fmt.Println("failed to parse " + s)
-			continue
-		}
-		itemIds = append(itemIds, int(num))
-	}
-	fmt.Println("parsed ids", itemIds)
+	// strItemIds := strings.Split(idsStr, ",")
+	// itemIds := make([]int, 0)
+	// for _, s := range strItemIds {
+	// 	num, err := strconv.ParseInt(s, 10, 32)
+	// 	if err != nil {
+	// 		fmt.Println("failed to parse " + s)
+	// 		continue
+	// 	}
+	// 	itemIds = append(itemIds, int(num))
+	// }
+	// fmt.Println("parsed ids", itemIds)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
