@@ -11,7 +11,7 @@ import (
 
 // Items is for serializin json
 type Items struct {
-	Data []Item `json:"data"`
+	Items []Item `json:"items"`
 }
 
 // Item is either Story, Comment, or Poll
@@ -41,7 +41,7 @@ var myClient = &http.Client{Timeout: 10 * time.Second}
 
 // ItemRepo hydrates Items
 type ItemRepo interface {
-	Hydrate(ctx context.Context, itemIds []int) (<-chan Item, <-chan error)
+	Hydrate(ctx context.Context, itemIds []int) (chan Item, chan error)
 }
 
 // Hydrate bro; https://venilnoronha.io/designing-asynchronous-functions-with-go
