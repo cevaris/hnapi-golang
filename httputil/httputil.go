@@ -23,6 +23,7 @@ type APIResponse struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// GetBool parses http bool params
 func GetBool(r *http.Request, paramName string, defaultValue bool) (bool, error) {
 	prettyJSONStr := r.URL.Query().Get("pretty")
 	if len(prettyJSONStr) != 0 {
@@ -38,7 +39,8 @@ func GetBool(r *http.Request, paramName string, defaultValue bool) (bool, error)
 	return defaultValue, nil
 }
 
-func GetSlice(r *http.Request, paramName string) ([]int, error) {
+// GetSlice parses http slices params
+func GetSlice(r *http.Request, paramName string, defaultValue []int) ([]int, error) {
 	value := r.URL.Query().Get(paramName)
 	if len(value) > 0 {
 		listOfStrings := strings.Split(value, ",")
@@ -55,9 +57,10 @@ func GetSlice(r *http.Request, paramName string) ([]int, error) {
 		return slice, nil
 	}
 
-	return nil, errors.New(paramName + " parameter not present or contains no value")
+	return defaultValue, nil
 }
 
+// SerializeErr writes exceptional JSON responses
 func SerializeErr(w http.ResponseWriter, err error) {
 	response := APIResponse{Status: "error", Message: err.Error()}
 	b, err := marshal(response, true)
@@ -69,6 +72,7 @@ func SerializeErr(w http.ResponseWriter, err error) {
 	http.Error(w, string(b), 400)
 }
 
+// SerializeData writes data as JSON
 func SerializeData(w http.ResponseWriter, data interface{}, isPrettyJSON bool) {
 	response := APIResponse{Status: "ok", Data: data}
 	b, err := marshal(response, isPrettyJSON)

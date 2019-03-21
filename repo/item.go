@@ -44,8 +44,8 @@ type ItemRepo interface {
 	Hydrate(ctx context.Context, itemIds []int) (chan Item, chan error)
 }
 
-// Hydrate bro; https://venilnoronha.io/designing-asynchronous-functions-with-go
-func Hydrate(ctx context.Context, itemIds []int) (chan Item, chan error) {
+// HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
+func HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error) {
 	itemChan := make(chan Item, len(itemIds))
 	errChan := make(chan error, len(itemIds))
 

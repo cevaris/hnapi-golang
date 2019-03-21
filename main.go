@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,9 +35,13 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func items(w http.ResponseWriter, r *http.Request) {
-	itemIds, err := httputil.GetSlice(r, "ids")
+	itemIds, err := httputil.GetSlice(r, "ids", []int{})
 	if err != nil {
 		httputil.SerializeErr(w, err)
+		return
+	}
+	if len(itemIds) == 0 {
+		httputil.SerializeErr(w, errors.New("missing 'ids' parameter or values"))
 		return
 	}
 
@@ -49,7 +54,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	itemChan, errChan := repo.Hydrate(ctx, itemIds)
+	itemChan, errChan := repo.HydrateItem(ctx, itemIds)
 	defer close(itemChan)
 	defer close(errChan)
 
