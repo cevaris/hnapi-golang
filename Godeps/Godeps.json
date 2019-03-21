@@ -2,5 +2,39 @@
 	"ImportPath": "github.com/cevaris/hnapi",
 	"GoVersion": "go1.12",
 	"GodepVersion": "v80",
-	"Deps": []
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/bradfitz/gomemcache/memcache",
+			"Comment": "release.r60-50-gbc664df",
+			"Rev": "bc664df9673713a0ccf26e3b55a673ec7301088b"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp",
+			"Comment": "v0.2.0-34-g6f77996",
+			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/diff",
+			"Comment": "v0.2.0-34-g6f77996",
+			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/flags",
+			"Comment": "v0.2.0-34-g6f77996",
+			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/function",
+			"Comment": "v0.2.0-34-g6f77996",
+			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+		},
+		{
+			"ImportPath": "github.com/google/go-cmp/cmp/internal/value",
+			"Comment": "v0.2.0-34-g6f77996",
+			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+		}
+	]
 }

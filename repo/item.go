@@ -41,7 +41,7 @@ var myClient = &http.Client{Timeout: 10 * time.Second}
 
 // ItemRepo hydrates Items
 type ItemRepo interface {
-	Hydrate(ctx context.Context, itemIds []int) (chan Item, chan error)
+	HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error)
 }
 
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
