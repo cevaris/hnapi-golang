@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/cevaris/httprouter"
 )
 
 var serverError = APIResponse{
@@ -25,16 +27,31 @@ type APIResponse struct {
 
 // GetBool parses http bool params
 func GetBool(r *http.Request, paramName string, defaultValue bool) (bool, error) {
-	prettyJSONStr := r.URL.Query().Get("pretty")
-	if len(prettyJSONStr) != 0 {
-		value, err := strconv.ParseBool(prettyJSONStr)
+	boolValue := r.URL.Query().Get(paramName)
+	if len(boolValue) != 0 {
+		value, err := strconv.ParseBool(boolValue)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse '%v' value of the param '%s', expected a boolean", prettyJSONStr, paramName)
+			msg := fmt.Sprintf("failed to parse '%v' value of the param '%s', expected a boolean", boolValue, paramName)
 			fmt.Println(msg, err.Error())
 			return false, errors.New(msg)
 		}
-		fmt.Println("found pretty param", value)
 		return value, nil
+	}
+	return defaultValue, nil
+}
+
+// GetInt parses and returns a int
+func GetInt(ps httprouter.Params, paramName string, defaultValue int) (int, error) {
+	valueStr := ps.ByName(paramName)
+	if len(valueStr) != 0 {
+		value, err := strconv.ParseInt(valueStr, 10, 32)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse '%v' value of the param '%s', expected a boolean", valueStr, paramName)
+			fmt.Println(msg, err.Error())
+			return defaultValue, errors.New(msg)
+		}
+		fmt.Println("found pretty param", valueStr)
+		return int(value), nil
 	}
 	return defaultValue, nil
 }

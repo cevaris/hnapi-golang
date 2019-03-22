@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,16 +14,18 @@ import (
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/httputil"
 	"github.com/cevaris/hnapi/model"
+	"github.com/cevaris/httprouter"
 )
 
 var itemRepo ItemRepo
 
-func topItems(w http.ResponseWriter, r *http.Request) {
+func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
 	if err != nil {
 		httputil.SerializeErr(w, err)
 		return
 	}
+	fmt.Println("found pretty param", isPrettyJSON)
 
 	itemIds, err := hydrateTopItems()
 	if err != nil {
@@ -46,7 +49,40 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
 
-func items(w http.ResponseWriter, r *http.Request) {
+func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	itemID, err := httputil.GetInt(ps, "ID", -1)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+	if itemID == -1 {
+		httputil.SerializeErr(w, errors.New("missing parameter 'ID'"))
+	}
+
+	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+	fmt.Println("found pretty param", isPrettyJSON)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	items, err := itemRepo.Get(ctx, []int{itemID})
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+
+	response := model.Items{
+		Items: items,
+	}
+
+	httputil.SerializeData(w, response, isPrettyJSON)
+}
+
+func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
 	if err != nil {
 		httputil.SerializeErr(w, err)
@@ -63,6 +99,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 		httputil.SerializeErr(w, err)
 		return
 	}
+	fmt.Println("found pretty param", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
@@ -84,14 +121,16 @@ func main() {
 	domain := getenv("DOMAIN", "0.0.0.0")
 	port := os.Getenv("PORT")
 	cacheHostPort := getenv("CACHE_HOST", "localhost:11211")
-	http.HandleFunc("/feed/top", topItems)
-	http.HandleFunc("/items", items)
 
 	itemBackend := backend.NewFireBaseItemBackend()
 	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
 	itemRepo = NewCachedItemRepo(itemBackend, cacheBackend)
 
-	http.ListenAndServe(domain+":"+port, nil)
+	router := httprouter.New()
+	router.GET("/feed/top", topItems)
+	router.GET("/items/:ID", item)
+	router.GET("/items", items)
+	http.ListenAndServe(domain+":"+port, router)
 }
 
 func hydrateTopItems() ([]int, error) {

@@ -2,7 +2,8 @@ package model
 
 // Items is for serializin json
 type Items struct {
-	Items []Item `json:"items"`
+	Items    []Item `json:"items"`
+	Comments []Item `json:"comments,omitempty"`
 }
 
 // Item is either Story, Comment, or Poll
