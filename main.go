@@ -15,6 +15,8 @@ import (
 	"github.com/cevaris/hnapi/model"
 )
 
+var itemRepo ItemRepo
+
 func topItems(w http.ResponseWriter, r *http.Request) {
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
 	if err != nil {
@@ -38,15 +40,11 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := model.Items{
-		Items: items,
+		Items: sortItemsBy(items, itemIds),
 	}
 
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
-
-var itemBackend = backend.NewFireBaseItemBackend()
-var cacheBackend = backend.NewMemcacheClient("localhost:11211")
-var itemRepo = NewCachedItemRepo(itemBackend, cacheBackend)
 
 func items(w http.ResponseWriter, r *http.Request) {
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
@@ -76,7 +74,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := model.Items{
-		Items: items,
+		Items: sortItemsBy(items, itemIds),
 	}
 
 	httputil.SerializeData(w, response, isPrettyJSON)
@@ -85,8 +83,14 @@ func items(w http.ResponseWriter, r *http.Request) {
 func main() {
 	domain := getenv("DOMAIN", "0.0.0.0")
 	port := os.Getenv("PORT")
+	cacheHostPort := getenv("CACHE_HOST", "localhost:11211")
 	http.HandleFunc("/feed/top", topItems)
 	http.HandleFunc("/items", items)
+
+	itemBackend := backend.NewFireBaseItemBackend()
+	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
+	itemRepo = NewCachedItemRepo(itemBackend, cacheBackend)
+
 	http.ListenAndServe(domain+":"+port, nil)
 }
 
@@ -119,4 +123,16 @@ func getenv(key, orElse string) string {
 		return value
 	}
 	return orElse
+}
+
+func sortItemsBy(source []model.Item, by []int) []model.Item {
+	result := make([]model.Item, 0)
+	for _, ID := range by {
+		for _, v := range source {
+			if v.ID == ID {
+				result = append(result, v)
+			}
+		}
+	}
+	return result
 }
