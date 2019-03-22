@@ -8,7 +8,7 @@ import (
 // CacheBackend is the common cache interface
 type CacheBackend interface {
 	Get(string, interface{}) error
-	Set(interface{}, int) error
+	Set(string, interface{}, int) error
 }
 
 // ToBytes niavely converts a value to []byte

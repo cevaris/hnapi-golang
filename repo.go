@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/model"
@@ -29,13 +30,29 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
-	// TODO: check cache
-	itemChan, errChan := c.itemBackend.HydrateItem(ctx, itemIds)
+
+	resultItems := make([]model.Item, 0)
+	needToHydrateItemIds := make([]int, 0)
+
+	for _, ID := range itemIds {
+		key := itemCacheKey(ID)
+		var item model.Item
+		err := c.cacheBackend.Get(key, &item)
+		if err != nil {
+			fmt.Println("cache miss", key, err)
+			needToHydrateItemIds = append(needToHydrateItemIds, ID)
+		} else {
+			fmt.Println("cache hit", key)
+			resultItems = append(resultItems, item)
+		}
+	}
+
+	itemChan, errChan := c.itemBackend.HydrateItem(ctx, needToHydrateItemIds)
 	defer close(itemChan)
 	defer close(errChan)
 
-	items := make([]model.Item, 0)
-	for range itemIds {
+	fmt.Println("items still needed to hydrate", needToHydrateItemIds)
+	for range needToHydrateItemIds {
 		select {
 		case err, ok := <-errChan:
 			fmt.Println("failed to hydrate item: ", err, ok)
@@ -48,10 +65,23 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 				fmt.Println("should not happen")
 				continue
 			}
-			// TODO: write to cache
-			items = append(items, r)
+
+			key := itemCacheKey(r.ID)
+			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(1)).Unix())
+			err := c.cacheBackend.Set(key, &r, ttl)
+			if err != nil {
+				fmt.Println("failed to write to cache", key, err.Error())
+			} else {
+				fmt.Println("wrote to cache", key)
+			}
+
+			resultItems = append(resultItems, r)
 		}
 	}
 
-	return items, nil
+	return resultItems, nil
+}
+
+func itemCacheKey(id int) string {
+	return fmt.Sprintf("item:%d", id)
 }

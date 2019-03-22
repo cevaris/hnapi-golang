@@ -22,7 +22,7 @@ func (m *MemcacheClient) Get(key string, result interface{}) error {
 		return err
 	}
 
-	err = FromBytes(cacheItem.Value, &result)
+	err = FromBytes(cacheItem.Value, result)
 	if err != nil {
 		return err
 	}
@@ -31,14 +31,16 @@ func (m *MemcacheClient) Get(key string, result interface{}) error {
 }
 
 // Set data in cache
-func (m *MemcacheClient) Set(data interface{}, ttl int) error {
+func (m *MemcacheClient) Set(key string, data interface{}, ttl int) error {
 	bytes, err := ToBytes(data)
 	if err != nil {
 		return err
 	}
 
 	item := memcache.Item{
-		Value: bytes,
+		Key:        key,
+		Value:      bytes,
+		Expiration: int32(ttl),
 	}
 	return m.client.Set(&item)
 }

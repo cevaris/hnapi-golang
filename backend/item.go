@@ -26,6 +26,7 @@ func NewFireBaseItemBackend() ItemBackend {
 	return &FireBaseItemBackend{client: &http.Client{Timeout: 10 * time.Second}}
 }
 
+// Perhaps https://gist.github.com/montanaflynn/ea4b92ed640f790c4b9cee36046a5383
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
 func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (chan model.Item, chan error) {
 	itemChan := make(chan model.Item, len(itemIds))
