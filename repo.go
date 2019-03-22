@@ -16,11 +16,11 @@ type ItemRepo interface {
 // CachedItemRepo hydrates and caches Items
 type CachedItemRepo struct {
 	itemBackend  backend.ItemBackend
-	cacheBackend backend.CacheClient
+	cacheBackend backend.CacheBackend
 }
 
 // NewCachedItemRepo cached backed item repository
-func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.CacheClient) ItemRepo {
+func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.CacheBackend) ItemRepo {
 	return &CachedItemRepo{
 		itemBackend:  itemBackend,
 		cacheBackend: cacheBackend,

@@ -5,8 +5,8 @@ import (
 	"encoding/gob"
 )
 
-// CacheClient is the common cache interface
-type CacheClient interface {
+// CacheBackend is the common cache interface
+type CacheBackend interface {
 	Get(string, interface{}) error
 	Set(interface{}, int) error
 }

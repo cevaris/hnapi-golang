@@ -22,7 +22,7 @@ type FireBaseItemBackend struct {
 }
 
 // NewFireBaseItemBackend constructs a new item repo
-func NewFireBaseItemBackend() *FireBaseItemBackend {
+func NewFireBaseItemBackend() ItemBackend {
 	return &FireBaseItemBackend{client: &http.Client{Timeout: 10 * time.Second}}
 }
 

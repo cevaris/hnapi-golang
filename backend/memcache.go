@@ -10,7 +10,7 @@ type MemcacheClient struct {
 // User proto for serialization https://stackoverflow.com/questions/37618399/efficient-go-serialization-of-struct-to-disk
 
 // NewMemcacheClient new client
-func NewMemcacheClient(hostname string) *MemcacheClient {
+func NewMemcacheClient(hostname string) CacheBackend {
 	client := memcache.New(hostname)
 	return &MemcacheClient{client: client}
 }
