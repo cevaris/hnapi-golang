@@ -1,4 +1,4 @@
-package data
+package model
 
 // Items is for serializin json
 type Items struct {

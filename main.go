@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,8 +12,8 @@ import (
 	"time"
 
 	"github.com/cevaris/hnapi/backend"
-	"github.com/cevaris/hnapi/data"
 	"github.com/cevaris/hnapi/httputil"
+	"github.com/cevaris/hnapi/model"
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +34,9 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var itemRepo = backend.NewFireBaseItemRepo()
+var itemBackend = backend.NewFireBaseItemBackend()
+var cacheBackend = backend.NewMemcacheClient("localhost:11211")
+var itemRepo = NewCachedItemRepo(itemBackend, cacheBackend)
 
 func items(w http.ResponseWriter, r *http.Request) {
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
@@ -43,6 +44,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 		httputil.SerializeErr(w, err)
 		return
 	}
+
 	if len(itemIds) == 0 {
 		httputil.SerializeErr(w, errors.New("missing 'ids' parameter or values"))
 		return
@@ -57,29 +59,13 @@ func items(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	itemChan, errChan := itemRepo.HydrateItem(ctx, itemIds)
-	defer close(itemChan)
-	defer close(errChan)
-
-	items := make([]data.Item, 0)
-	for range itemIds {
-		select {
-		case err, ok := <-errChan:
-			fmt.Println("failed to hydrate item: ", err, ok)
-			if err == context.Canceled {
-				fmt.Println("hydrate item was cancelled: ", err, ok)
-				break
-			}
-		case r, ok := <-itemChan:
-			if !ok {
-				fmt.Println("should not happen")
-				continue
-			}
-			items = append(items, r)
-		}
+	items, err := itemRepo.Get(ctx, itemIds)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
 	}
 
-	response := data.Items{
+	response := model.Items{
 		Items: items,
 	}
 
