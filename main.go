@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,10 +14,6 @@ import (
 	"github.com/cevaris/hnapi/httputil"
 	"github.com/cevaris/hnapi/model"
 )
-
-func hello(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Hello World!")
-}
 
 func topItems(w http.ResponseWriter, r *http.Request) {
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
@@ -90,7 +85,6 @@ func items(w http.ResponseWriter, r *http.Request) {
 func main() {
 	domain := getenv("DOMAIN", "0.0.0.0")
 	port := os.Getenv("PORT")
-	http.HandleFunc("/", hello)
 	http.HandleFunc("/feed/top", topItems)
 	http.HandleFunc("/items", items)
 	http.ListenAndServe(domain+":"+port, nil)
