@@ -12,8 +12,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/cevaris/hnapi/backend"
+	"github.com/cevaris/hnapi/data"
 	"github.com/cevaris/hnapi/httputil"
-	"github.com/cevaris/hnapi/repo"
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +35,7 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var itemRepo = repo.NewFireBaseItemRepo()
+var itemRepo = backend.NewFireBaseItemRepo()
 
 func items(w http.ResponseWriter, r *http.Request) {
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
@@ -60,7 +61,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 	defer close(itemChan)
 	defer close(errChan)
 
-	items := make([]repo.Item, 0)
+	items := make([]data.Item, 0)
 	for range itemIds {
 		select {
 		case err, ok := <-errChan:
@@ -78,7 +79,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response := repo.Items{
+	response := data.Items{
 		Items: items,
 	}
 

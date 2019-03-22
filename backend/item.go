@@ -1,4 +1,4 @@
-package repo
+package backend
 
 import (
 	"context"
@@ -7,41 +7,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/cevaris/hnapi/data"
 )
-
-// Items is for serializin json
-type Items struct {
-	Items []Item `json:"items"`
-}
-
-// Item is either Story, Comment, or Poll
-type Item struct {
-	ID   int    `json:"id"`
-	Type string `json:"type,omitempty"`
-	By   string `json:"by,omitempty"`
-	Time int    `json:"time,omitempty"`
-
-	Deleted bool `json:"deleted,omitempty"`
-	Dead    bool `json:"dead,omitempty"`
-
-	Parent int `json:"parent,omitempty"`
-
-	Poll  int   `json:"poll,omitempty"`
-	Parts []int `json:"parts,omitempty"`
-
-	Decendants int   `json:"decendants,omitempty"`
-	Kids       []int `json:"kids,omitempty"`
-
-	URL   string `json:"url,omitempty"`
-	Score int    `json:"score,omitempty"`
-	Title string `json:"title,omitempty"`
-}
 
 var myClient = &http.Client{Timeout: 10 * time.Second}
 
 // ItemRepo hydrates Items
 type ItemRepo interface {
-	HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error)
+	HydrateItem(ctx context.Context, itemIds []int) (chan data.Item, chan error)
 }
 
 // FireBaseItemRepo firebase backed http client
@@ -55,8 +29,8 @@ func NewFireBaseItemRepo() *FireBaseItemRepo {
 }
 
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
-func (f *FireBaseItemRepo) HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error) {
-	itemChan := make(chan Item, len(itemIds))
+func (f *FireBaseItemRepo) HydrateItem(ctx context.Context, itemIds []int) (chan data.Item, chan error) {
+	itemChan := make(chan data.Item, len(itemIds))
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
@@ -65,7 +39,7 @@ func (f *FireBaseItemRepo) HydrateItem(ctx context.Context, itemIds []int) (chan
 	return itemChan, errChan
 }
 
-func asyncHydrate(ctx context.Context, itemID int, itemChan chan<- Item, errChan chan<- error) {
+func asyncHydrate(ctx context.Context, itemID int, itemChan chan<- data.Item, errChan chan<- error) {
 	select {
 	case <-ctx.Done():
 		errChan <- ctx.Err()
@@ -88,7 +62,7 @@ func asyncHydrate(ctx context.Context, itemID int, itemChan chan<- Item, errChan
 
 	fmt.Println("hydrated", itemID, string(body))
 
-	var item Item
+	var item data.Item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
 		fmt.Println("failed unmarshalling item", string(body), err)

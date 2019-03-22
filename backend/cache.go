@@ -1,4 +1,4 @@
-package cache
+package backend
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 
 // Client is the common cache interface
 type Client interface {
-	Get([]int) (interface{}, error)
+	Get([]int, interface{}) error
 	Set(interface{}, int) error
 }
 
