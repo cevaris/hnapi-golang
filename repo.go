@@ -29,6 +29,7 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
+	// TODO: check cache
 	itemChan, errChan := c.itemBackend.HydrateItem(ctx, itemIds)
 	defer close(itemChan)
 	defer close(errChan)
@@ -47,6 +48,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 				fmt.Println("should not happen")
 				continue
 			}
+			// TODO: write to cache
 			items = append(items, r)
 		}
 	}
