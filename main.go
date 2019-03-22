@@ -34,6 +34,8 @@ func topItems(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var itemRepo = repo.NewFireBaseItemRepo()
+
 func items(w http.ResponseWriter, r *http.Request) {
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
 	if err != nil {
@@ -54,7 +56,7 @@ func items(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	itemChan, errChan := repo.HydrateItem(ctx, itemIds)
+	itemChan, errChan := itemRepo.HydrateItem(ctx, itemIds)
 	defer close(itemChan)
 	defer close(errChan)
 

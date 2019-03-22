@@ -44,8 +44,18 @@ type ItemRepo interface {
 	HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error)
 }
 
+// FireBaseItemRepo firebase backed http client
+type FireBaseItemRepo struct {
+	client *http.Client
+}
+
+// NewFireBaseItemRepo constructs a new item repo
+func NewFireBaseItemRepo() *FireBaseItemRepo {
+	return &FireBaseItemRepo{client: &http.Client{Timeout: 10 * time.Second}}
+}
+
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
-func HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error) {
+func (f *FireBaseItemRepo) HydrateItem(ctx context.Context, itemIds []int) (chan Item, chan error) {
 	itemChan := make(chan Item, len(itemIds))
 	errChan := make(chan error, len(itemIds))
 
