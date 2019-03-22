@@ -21,17 +21,32 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func topItems(w http.ResponseWriter, r *http.Request) {
+	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+
 	itemIds, err := hydrateTopItems()
 	if err != nil {
-		io.WriteString(w, "[]")
-	} else {
-		response, err := json.Marshal(itemIds)
-		if err != nil {
-			io.WriteString(w, "[]")
-		} else {
-			io.WriteString(w, string(response))
-		}
+		httputil.SerializeErr(w, errors.New("failed to fetch top item ids"))
+		return
 	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	items, err := itemRepo.Get(ctx, itemIds)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+
+	response := model.Items{
+		Items: items,
+	}
+
+	httputil.SerializeData(w, response, isPrettyJSON)
 }
 
 var itemBackend = backend.NewFireBaseItemBackend()

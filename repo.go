@@ -30,7 +30,6 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
-
 	resultItems := make([]model.Item, 0)
 	needToHydrateItemIds := make([]int, 0)
 
