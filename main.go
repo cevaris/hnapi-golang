@@ -75,8 +75,22 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
+	var item model.Item
+	if len(items) == 0 {
+		httputil.SerializeErr(w, fmt.Errorf("failed to hydrate %d", itemID))
+		return
+	}
+	item = items[0]
+
+	comments, err := itemRepo.Get(ctx, item.Kids)
+	if err != nil {
+		httputil.SerializeErr(w, err)
+		return
+	}
+
 	response := model.Items{
-		Items: items,
+		Items:    items,
+		Comments: comments,
 	}
 
 	httputil.SerializeData(w, response, isPrettyJSON)
