@@ -33,14 +33,14 @@ type Item struct {
 
 // Conversation assit rendering nested comments
 type Conversation struct {
-	ID   int            `json:"id"`
-	Kids []Conversation `json:"kids"`
+	ID   int             `json:"id"`
+	Kids []*Conversation `json:"kids"`
 }
 
 // NewConversation constructor
-func NewConversation(ID int) Conversation {
-	return Conversation{
+func NewConversation(ID int) *Conversation {
+	return &Conversation{
 		ID:   ID,
-		Kids: []Conversation{},
+		Kids: []*Conversation{},
 	}
 }

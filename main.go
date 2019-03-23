@@ -58,7 +58,7 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 
 	for _, item := range items {
 		newConversation := model.NewConversation(item.ID)
-		hydrateComments(ctx, item.Kids, results, &newConversation)
+		hydrateComments(ctx, item.Kids, results, newConversation)
 		conversation.Kids = append(conversation.Kids, newConversation)
 
 		if len(item.Kids) == 0 {
@@ -72,6 +72,8 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 
 		*results = append(*results, comments...)
 	}
+
+	conversation.Kids = sortConversationByP(conversation.Kids, commentIds)
 
 	return nil
 }
@@ -94,7 +96,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	fmt.Println("found pretty param", isPrettyJSON)
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
 	items, err := itemRepo.Get(ctx, []int{itemID})
@@ -207,6 +209,18 @@ func getenv(key, orElse string) string {
 
 func sortItemsBy(source []model.Item, by []int) []model.Item {
 	result := make([]model.Item, 0)
+	for _, ID := range by {
+		for _, v := range source {
+			if v.ID == ID {
+				result = append(result, v)
+			}
+		}
+	}
+	return result
+}
+
+func sortConversationByP(source []*model.Conversation, by []int) []*model.Conversation {
+	result := make([]*model.Conversation, 0)
 	for _, ID := range by {
 		for _, v := range source {
 			if v.ID == ID {

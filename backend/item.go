@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/cevaris/hnapi/model"
@@ -23,22 +24,29 @@ type FireBaseItemBackend struct {
 
 // NewFireBaseItemBackend constructs a new item repo
 func NewFireBaseItemBackend() ItemBackend {
-	return &FireBaseItemBackend{client: &http.Client{Timeout: 10 * time.Second}}
+	return &FireBaseItemBackend{client: &http.Client{Timeout: 30 * time.Second}}
 }
 
-// Perhaps https://gist.github.com/montanaflynn/ea4b92ed640f790c4b9cee36046a5383
+// MAX http requests
+const MAX = 40
+
+var sem = make(chan int, MAX)
+
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
+// Perhaps https://gist.github.com/montanaflynn/ea4b92ed640f790c4b9cee36046a5383
 func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (chan model.Item, chan error) {
 	itemChan := make(chan model.Item, len(itemIds))
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
-		go f.asyncHydrate(ctx, itemID, itemChan, errChan)
+		sem <- 1
+		fmt.Println(len(sem), runtime.NumGoroutine())
+		go f.asyncHydrate(ctx, itemID, itemChan, errChan, sem)
 	}
 	return itemChan, errChan
 }
 
-func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, itemChan chan<- model.Item, errChan chan<- error) {
+func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, itemChan chan<- model.Item, errChan chan<- error, sem <-chan int) {
 	select {
 	case <-ctx.Done():
 		errChan <- ctx.Err()
@@ -46,12 +54,14 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	default:
 	}
 
+	// fmt.Println(itemID, "fetching item")
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
 	if err != nil {
 		fmt.Println("failed making http request", url)
 		errChan <- err
 	}
+	// fmt.Println(itemID, "fetched item")
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -59,7 +69,9 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 		errChan <- err
 	}
 
-	fmt.Println("hydrated", itemID, string(body))
+	// fmt.Println("hydrated", itemID, string(body))
+	// fmt.Println("hydrated", itemID)
+	// fmt.Println(itemID, "hydrated")
 
 	var item model.Item
 	err = json.Unmarshal(body, &item)
@@ -69,4 +81,6 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	}
 
 	itemChan <- item
+	<-sem
+	// fmt.Println(itemID, "completed item")
 }

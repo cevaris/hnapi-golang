@@ -8,7 +8,8 @@
 - [Golang Unit testing](https://blog.alexellis.io/golang-writing-unit-tests/)
 - [Golang interfaces](https://tour.golang.org/methods/10)
 - [Golang memcached client](https://github.com/bradfitz/gomemcache)
-
+- [Golang collection operations](https://gobyexample.com/collection-functions)
+- [HN 1400+ Comments](https://news.ycombinator.com/item?id=13682022)
 
 Running locally
 
