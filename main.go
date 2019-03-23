@@ -49,6 +49,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
+
 func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Item, conversation *model.Conversation) error {
 	items, err := itemRepo.Get(ctx, commentIds)
 	if err != nil {
@@ -56,6 +57,10 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 	}
 
 	for _, item := range items {
+		newConversation := model.NewConversation(item.ID)
+		hydrateComments(ctx, item.Kids, results, &newConversation)
+		conversation.Kids = append(conversation.Kids, newConversation)
+
 		if len(item.Kids) == 0 {
 			continue
 		}
@@ -66,15 +71,6 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 		}
 
 		*results = append(*results, comments...)
-
-		newConversations := make([]model.Conversation, 0)
-		for _, commentID := range item.Kids {
-			newConversations = append(newConversations, model.Conversation{ID: commentID})
-		}
-		newConversation := model.Conversation{ID: item.ID, Kids: newConversations}
-		conversation.Kids = append(conversation.Kids, newConversation)
-
-		hydrateComments(ctx, item.Kids, results, &newConversation)
 	}
 
 	return nil

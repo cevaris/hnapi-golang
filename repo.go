@@ -38,10 +38,10 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		var item model.Item
 		err := c.cacheBackend.Get(key, &item)
 		if err != nil {
-			fmt.Println("cache miss", key, err)
+			// fmt.Println("cache miss", key, err)
 			needToHydrateItemIds = append(needToHydrateItemIds, ID)
 		} else {
-			fmt.Println("cache hit", key)
+			// fmt.Println("cache hit", key)
 			resultItems = append(resultItems, item)
 		}
 	}
@@ -50,28 +50,28 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	defer close(itemChan)
 	defer close(errChan)
 
-	fmt.Println("items still needed to hydrate", needToHydrateItemIds)
+	// fmt.Println("items still needed to hydrate", needToHydrateItemIds)
 	for range needToHydrateItemIds {
 		select {
-		case err, ok := <-errChan:
-			fmt.Println("failed to hydrate item: ", err, ok)
+		case err, _ := <-errChan:
+			// fmt.Println("failed to hydrate item: ", err, ok)
 			if err == context.Canceled {
-				fmt.Println("hydrate item was cancelled: ", err, ok)
+				// fmt.Println("hydrate item was cancelled: ", err, ok)
 				break
 			}
 		case r, ok := <-itemChan:
 			if !ok {
-				fmt.Println("should not happen")
+				// fmt.Println("should not happen")
 				continue
 			}
 
 			key := itemCacheKey(r.ID)
-			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(1)).Unix())
+			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(10)).Unix())
 			err := c.cacheBackend.Set(key, &r, ttl)
 			if err != nil {
-				fmt.Println("failed to write to cache", key, err.Error())
+				// fmt.Println("failed to write to cache", key, err.Error())
 			} else {
-				fmt.Println("wrote to cache", key)
+				// fmt.Println("wrote to cache", key)
 			}
 
 			resultItems = append(resultItems, r)
