@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/cevaris/hnapi/backend"
@@ -49,6 +50,30 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
 
+func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Item) error {
+	items, err := itemRepo.Get(ctx, commentIds)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if len(item.Kids) == 0 {
+			continue
+		}
+
+		comments, err := itemRepo.Get(ctx, item.Kids)
+		if err != nil {
+			return err
+		}
+
+		*results = append(*results, comments...)
+
+		hydrateComments(ctx, item.Kids, results)
+	}
+
+	return nil
+}
+
 func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	itemID, err := httputil.GetInt(ps, "ID", -1)
 	if err != nil {
@@ -56,7 +81,8 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 	if itemID == -1 {
-		httputil.SerializeErr(w, errors.New("missing parameter 'ID'"))
+		httputil.SerializeErr(w, errors.New("missing parameter ':id'"))
+		return
 	}
 
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
@@ -82,15 +108,12 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	item = items[0]
 
-	comments, err := itemRepo.Get(ctx, item.Kids)
-	if err != nil {
-		httputil.SerializeErr(w, err)
-		return
-	}
+	comments := make([]model.Item, 0)
+	err = hydrateComments(ctx, item.Kids, &comments)
 
 	response := model.Items{
 		Items:    items,
-		Comments: comments,
+		Comments: sortItemsByTime(comments),
 	}
 
 	httputil.SerializeData(w, response, isPrettyJSON)
@@ -188,4 +211,9 @@ func sortItemsBy(source []model.Item, by []int) []model.Item {
 		}
 	}
 	return result
+}
+
+func sortItemsByTime(source []model.Item) []model.Item {
+	sort.Slice(source, func(i, j int) bool { return source[i].Time < source[j].Time })
+	return source
 }
