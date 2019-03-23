@@ -2,8 +2,9 @@ package model
 
 // Items is for serializin json
 type Items struct {
-	Items    []Item `json:"items"`
-	Comments []Item `json:"comments,omitempty"`
+	Items        []Item       `json:"items"`
+	Conversation Conversation `json:"conversation,omitempty"`
+	Comments     []Item       `json:"comments,omitempty"`
 }
 
 // Item is either Story, Comment, or Poll
@@ -28,4 +29,10 @@ type Item struct {
 	URL   string `json:"url,omitempty"`
 	Score int    `json:"score,omitempty"`
 	Title string `json:"title,omitempty"`
+}
+
+// Conversation assit rendering nested comments
+type Conversation struct {
+	ID   int            `json:"id"`
+	Kids []Conversation `json:"kids"`
 }

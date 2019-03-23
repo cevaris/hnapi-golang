@@ -49,8 +49,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
-
-func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Item) error {
+func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Item, conversation *model.Conversation) error {
 	items, err := itemRepo.Get(ctx, commentIds)
 	if err != nil {
 		return err
@@ -68,7 +67,14 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 
 		*results = append(*results, comments...)
 
-		hydrateComments(ctx, item.Kids, results)
+		newConversations := make([]model.Conversation, 0)
+		for _, commentID := range item.Kids {
+			newConversations = append(newConversations, model.Conversation{ID: commentID})
+		}
+		newConversation := model.Conversation{ID: item.ID, Kids: newConversations}
+		conversation.Kids = append(conversation.Kids, newConversation)
+
+		hydrateComments(ctx, item.Kids, results, &newConversation)
 	}
 
 	return nil
@@ -92,7 +98,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	fmt.Println("found pretty param", isPrettyJSON)
 
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
 	items, err := itemRepo.Get(ctx, []int{itemID})
@@ -109,11 +115,13 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	item = items[0]
 
 	comments := make([]model.Item, 0)
-	err = hydrateComments(ctx, item.Kids, &comments)
+	conversation := model.Conversation{ID: itemID}
+	err = hydrateComments(ctx, item.Kids, &comments, &conversation)
 
 	response := model.Items{
-		Items:    items,
-		Comments: sortItemsByTime(comments),
+		Items:        items,
+		Conversation: conversation,
+		Comments:     sortItemsByTime(comments),
 	}
 
 	httputil.SerializeData(w, response, isPrettyJSON)
