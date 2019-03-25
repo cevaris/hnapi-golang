@@ -69,14 +69,6 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 		newConversation := model.NewConversation(item.ID)
 		hydrateComments(ctx, item.Kids, results, newConversation)
 		conversation.Kids = append(conversation.Kids, newConversation)
-
-		comments, err := itemRepo.Get(ctx, item.Kids)
-		if err != nil {
-			fmt.Println("failed hydrating comment kids", err)
-			return err
-		}
-
-		*results = append(*results, comments...)
 	}
 
 	// sort conversaton by provided comments list

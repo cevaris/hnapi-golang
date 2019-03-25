@@ -33,6 +33,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	fmt.Println("CachedItemRepo.Get", itemIds)
 	resultItems := make([]model.Item, 0)
 	needToHydrateItemIds := make([]int, 0)
+	// needToHydrateItemIds := itemIds
 
 	for _, ID := range itemIds {
 		key := itemCacheKey(ID)
