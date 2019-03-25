@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/model"
@@ -32,21 +33,21 @@ var set = make(map[int]bool)
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
 	resultItems := make([]model.Item, 0)
-	needToHydrateItemIds := itemIds
-	// needToHydrateItemIds := make([]int, 0)
+	// needToHydrateItemIds := itemIds
+	needToHydrateItemIds := make([]int, 0)
 
-	// for _, ID := range itemIds {
-	// 	key := itemCacheKey(ID)
-	// 	var item model.Item
-	// 	err := c.cacheBackend.Get(key, &item)
-	// 	if err != nil {
-	// 		// fmt.Println("cache miss", key, err)
-	// 		needToHydrateItemIds = append(needToHydrateItemIds, ID)
-	// 	} else {
-	// 		// fmt.Println("cache hit", key)
-	// 		resultItems = append(resultItems, item)
-	// 	}
-	// }
+	for _, ID := range itemIds {
+		key := itemCacheKey(ID)
+		var item model.Item
+		err := c.cacheBackend.Get(key, &item)
+		if err != nil {
+			// fmt.Println("cache miss", key, err)
+			needToHydrateItemIds = append(needToHydrateItemIds, ID)
+		} else {
+			// fmt.Println("cache hit", key)
+			resultItems = append(resultItems, item)
+		}
+	}
 
 	for _, ID := range itemIds {
 		set[ID] = true
@@ -60,25 +61,26 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	for range needToHydrateItemIds {
 		select {
 		case err, ok := <-errChan:
-			fmt.Println("failed to hydrate item: ", err, ok)
 			if err == context.Canceled {
 				fmt.Println("hydrate item was cancelled: ", err, ok)
-				break
+				return resultItems, err
 			}
+			fmt.Println("failed to hydrate item: ", err, ok)
+
 		case r, ok := <-itemChan:
 			if !ok {
 				fmt.Println("should not happen")
 				continue
 			}
 
-			// key := itemCacheKey(r.ID)
-			// ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(10)).Unix())
-			// err := c.cacheBackend.Set(key, &r, ttl)
-			// if err != nil {
-			// 	// fmt.Println("failed to write to cache", key, err.Error())
-			// } else {
-			// 	// fmt.Println("wrote to cache", key)
-			// }
+			key := itemCacheKey(r.ID)
+			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(10)).Unix())
+			err := c.cacheBackend.Set(key, &r, ttl)
+			if err != nil {
+				// fmt.Println("failed to write to cache", key, err.Error())
+			} else {
+				// fmt.Println("wrote to cache", key)
+			}
 
 			resultItems = append(resultItems, r)
 			delete(set, r.ID)

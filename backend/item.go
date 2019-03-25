@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"runtime"
-	"time"
 
 	"github.com/cevaris/hnapi/model"
+	"github.com/sethgrid/pester"
 )
 
 // ItemBackend hydrates Items
@@ -19,12 +18,18 @@ type ItemBackend interface {
 
 // FireBaseItemBackend firebase backed http client
 type FireBaseItemBackend struct {
-	client *http.Client
+	client *pester.Client
 }
 
 // NewFireBaseItemBackend constructs a new item repo
 func NewFireBaseItemBackend() ItemBackend {
-	return &FireBaseItemBackend{client: &http.Client{Timeout: 5 * time.Second}}
+	client := pester.New()
+	client.Concurrency = 1
+	client.MaxRetries = 5
+	client.Backoff = pester.ExponentialBackoff
+	client.KeepLog = true
+
+	return &FireBaseItemBackend{client: client}
 }
 
 // MAX http requests
@@ -49,6 +54,7 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, itemChan chan<- model.Item, errChan chan<- error, sem <-chan int) {
 	select {
 	case <-ctx.Done():
+		<-sem
 		errChan <- ctx.Err()
 		return // short circuit
 	default:
@@ -57,16 +63,21 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	// fmt.Println(itemID, "fetching item")
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
+	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println("failed making http request", url)
+		<-sem
 		errChan <- err
+		return
 	}
 	// fmt.Println(itemID, "fetched item")
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("failed reading http response", itemID)
+		<-sem
 		errChan <- err
+		return
 	}
 
 	// fmt.Println("hydrated", itemID, string(body))
@@ -77,7 +88,9 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
 		fmt.Println("failed unmarshalling item", string(body), err)
+		<-sem
 		errChan <- err
+		return
 	}
 
 	itemChan <- item
