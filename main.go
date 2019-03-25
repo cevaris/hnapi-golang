@@ -16,6 +16,9 @@ import (
 	"github.com/cevaris/hnapi/httputil"
 	"github.com/cevaris/hnapi/model"
 	"github.com/cevaris/httprouter"
+
+	"net/http/pprof"
+	_ "net/http/pprof"
 )
 
 var itemRepo ItemRepo
@@ -173,6 +176,7 @@ func main() {
 	router.GET("/feed/top", topItems)
 	router.GET("/items/:ID", item)
 	router.GET("/items", items)
+	router.GET("/debug/pprof/goroutine", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { pprof.Index(w, r) })
 	http.ListenAndServe(domain+":"+port, router)
 }
 

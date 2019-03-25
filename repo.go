@@ -59,10 +59,10 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	// fmt.Println("items still needed to hydrate", needToHydrateItemIds)
 	for range needToHydrateItemIds {
 		select {
-		case err, _ := <-errChan:
-			// fmt.Println("failed to hydrate item: ", err, ok)
+		case err, ok := <-errChan:
+			fmt.Println("failed to hydrate item: ", err, ok)
 			if err == context.Canceled {
-				// fmt.Println("hydrate item was cancelled: ", err, ok)
+				fmt.Println("hydrate item was cancelled: ", err, ok)
 				break
 			}
 		case r, ok := <-itemChan:

@@ -24,7 +24,7 @@ type FireBaseItemBackend struct {
 
 // NewFireBaseItemBackend constructs a new item repo
 func NewFireBaseItemBackend() ItemBackend {
-	return &FireBaseItemBackend{client: &http.Client{Timeout: 30 * time.Second}}
+	return &FireBaseItemBackend{client: &http.Client{Timeout: 5 * time.Second}}
 }
 
 // MAX http requests
@@ -39,8 +39,8 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
-		sem <- 1
 		fmt.Println(len(sem), runtime.NumGoroutine())
+		sem <- 1
 		go f.asyncHydrate(ctx, itemID, itemChan, errChan, sem)
 	}
 	return itemChan, errChan
