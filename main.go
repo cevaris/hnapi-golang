@@ -54,19 +54,21 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Item, conversation *model.Conversation) error {
+	if len(commentIds) == 0 {
+		return nil
+	}
+
 	items, err := itemRepo.Get(ctx, commentIds)
 	if err != nil {
 		return err
 	}
 
 	for _, item := range items {
+		*results = append(*results, item)
+
 		newConversation := model.NewConversation(item.ID)
 		hydrateComments(ctx, item.Kids, results, newConversation)
 		conversation.Kids = append(conversation.Kids, newConversation)
-
-		if len(item.Kids) == 0 {
-			continue
-		}
 
 		comments, err := itemRepo.Get(ctx, item.Kids)
 		if err != nil {

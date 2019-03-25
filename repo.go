@@ -30,8 +30,8 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
+	fmt.Println("CachedItemRepo.Get", itemIds)
 	resultItems := make([]model.Item, 0)
-	// needToHydrateItemIds := itemIds
 	needToHydrateItemIds := make([]int, 0)
 
 	for _, ID := range itemIds {
@@ -39,10 +39,10 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		var item model.Item
 		err := c.cacheBackend.Get(key, &item)
 		if err != nil {
-			// fmt.Println("cache miss", key, err)
+			fmt.Println("CachedItemRepo.Get", "cache miss", key, err)
 			needToHydrateItemIds = append(needToHydrateItemIds, ID)
 		} else {
-			// fmt.Println("cache hit", key)
+			fmt.Println("CachedItemRepo.Get", "cache hit", key)
 			resultItems = append(resultItems, item)
 		}
 	}
@@ -51,7 +51,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	defer close(itemChan)
 	defer close(errChan)
 
-	// fmt.Println("items still needed to hydrate", needToHydrateItemIds)
+	fmt.Println("CachedItemRepo.Get", "items still needed to hydrate", needToHydrateItemIds)
 	for range needToHydrateItemIds {
 		select {
 		case err, ok := <-errChan:
