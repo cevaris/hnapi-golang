@@ -33,7 +33,7 @@ func NewFireBaseItemBackend() ItemBackend {
 }
 
 // MAX http requests
-const MAX = 40
+const MAX = 25
 
 var sem = make(chan int, MAX)
 

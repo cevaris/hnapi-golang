@@ -10,6 +10,7 @@
 - [Golang memcached client](https://github.com/bradfitz/gomemcache)
 - [Golang collection operations](https://gobyexample.com/collection-functions)
 - [HN 1400+ Comments](https://news.ycombinator.com/item?id=13682022)
+- [Golang HTTP prof debugging](https://golang.org/pkg/net/http/pprof/)
 
 Running locally
 
