@@ -28,8 +28,6 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 	}
 }
 
-var set = make(map[int]bool)
-
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
 	resultItems := make([]model.Item, 0)
@@ -49,10 +47,6 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		}
 	}
 
-	for _, ID := range itemIds {
-		set[ID] = true
-	}
-
 	itemChan, errChan := c.itemBackend.HydrateItem(ctx, needToHydrateItemIds)
 	defer close(itemChan)
 	defer close(errChan)
@@ -63,7 +57,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		case err, ok := <-errChan:
 			if err == context.Canceled {
 				fmt.Println("hydrate item was cancelled: ", err, ok)
-				return resultItems, err
+				continue
 			}
 			fmt.Println("failed to hydrate item: ", err, ok)
 
@@ -83,8 +77,6 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 			}
 
 			resultItems = append(resultItems, r)
-			delete(set, r.ID)
-			// fmt.Println("completed", r.ID, "left over", len(set), set)
 		}
 	}
 

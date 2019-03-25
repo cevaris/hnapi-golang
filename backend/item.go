@@ -37,6 +37,13 @@ const MAX = 25
 
 var sem = make(chan int, MAX)
 
+func incr() {
+	sem <- 1
+}
+func decr() {
+	<-sem
+}
+
 // HydrateItem https://venilnoronha.io/designing-asynchronous-functions-with-go
 // Perhaps https://gist.github.com/montanaflynn/ea4b92ed640f790c4b9cee36046a5383
 func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (chan model.Item, chan error) {
@@ -45,16 +52,17 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 
 	for _, itemID := range itemIds {
 		fmt.Println(len(sem), runtime.NumGoroutine())
-		sem <- 1
-		go f.asyncHydrate(ctx, itemID, itemChan, errChan, sem)
+		incr()
+		go f.asyncHydrate(ctx, itemID, itemChan, errChan)
 	}
 	return itemChan, errChan
 }
 
-func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, itemChan chan<- model.Item, errChan chan<- error, sem <-chan int) {
+func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, itemChan chan<- model.Item, errChan chan<- error) {
+	defer decr()
+
 	select {
 	case <-ctx.Done():
-		<-sem
 		errChan <- ctx.Err()
 		return // short circuit
 	default:
@@ -66,7 +74,6 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println("failed making http request", url)
-		<-sem
 		errChan <- err
 		return
 	}
@@ -75,7 +82,6 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("failed reading http response", itemID)
-		<-sem
 		errChan <- err
 		return
 	}
@@ -88,12 +94,10 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
 		fmt.Println("failed unmarshalling item", string(body), err)
-		<-sem
 		errChan <- err
 		return
 	}
 
 	itemChan <- item
-	<-sem
 	// fmt.Println(itemID, "completed item")
 }
