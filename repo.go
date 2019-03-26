@@ -30,7 +30,7 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
-	fmt.Println("CachedItemRepo.Get", itemIds)
+	log.Debug("%v", itemIds)
 	resultItems := make([]model.Item, 0)
 	needToHydrateItemIds := make([]int, 0)
 	// needToHydrateItemIds := itemIds
@@ -40,10 +40,10 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		var item model.Item
 		err := c.cacheBackend.Get(key, &item)
 		if err != nil {
-			fmt.Println("CachedItemRepo.Get", "cache miss", key, err)
+			log.Error("cache miss %s %v", key, err)
 			needToHydrateItemIds = append(needToHydrateItemIds, ID)
 		} else {
-			fmt.Println("CachedItemRepo.Get", "cache hit", key)
+			log.Debug("cache hit %s", key)
 			resultItems = append(resultItems, item)
 		}
 	}
@@ -52,19 +52,19 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	defer close(itemChan)
 	defer close(errChan)
 
-	fmt.Println("CachedItemRepo.Get", "items still needed to hydrate", needToHydrateItemIds)
+	log.Debug("items still needed to hydrate %v", needToHydrateItemIds)
 	for range needToHydrateItemIds {
 		select {
 		case err, ok := <-errChan:
 			if err == context.Canceled {
-				fmt.Println("hydrate item was cancelled: ", err, ok)
+				log.Error("hydrate item was cancelled: %v %t", err, ok)
 				continue
 			}
-			fmt.Println("failed to hydrate item: ", err, ok)
+			log.Error("failed to hydrate item %v %t", err, ok)
 
 		case r, ok := <-itemChan:
 			if !ok {
-				fmt.Println("should not happen")
+				log.Debug("should not happen %v", r)
 				continue
 			}
 
@@ -72,9 +72,9 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(10)).Unix())
 			err := c.cacheBackend.Set(key, &r, ttl)
 			if err != nil {
-				// fmt.Println("failed to write to cache", key, err.Error())
+				log.Error("failed to write to cache %s %v", key, err)
 			} else {
-				// fmt.Println("wrote to cache", key)
+				log.Debug("wrote to cache %s", key)
 			}
 
 			resultItems = append(resultItems, r)

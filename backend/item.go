@@ -27,7 +27,6 @@ func NewFireBaseItemBackend() ItemBackend {
 	client.Concurrency = 1
 	client.MaxRetries = 5
 	client.Backoff = pester.ExponentialBackoff
-	client.KeepLog = true
 
 	return &FireBaseItemBackend{client: client}
 }
@@ -51,7 +50,7 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
-		fmt.Println(len(sem), runtime.NumGoroutine())
+		log.Debug("processing=%d goroutines=%d", len(sem), runtime.NumGoroutine())
 		incr()
 		go f.asyncHydrate(ctx, itemID, itemChan, errChan)
 	}
@@ -68,36 +67,34 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	default:
 	}
 
-	// fmt.Println(itemID, "fetching item")
+	log.Debug("%d fetching item", itemID)
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
 	defer resp.Body.Close()
 	if err != nil {
-		fmt.Println("failed making http request", url)
+		log.Error("failed making http request", url)
 		errChan <- err
 		return
 	}
-	// fmt.Println(itemID, "fetched item")
+	log.Debug("%d fetched items", itemID)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("failed reading http response", itemID)
+		log.Error("failed reading http response", itemID)
 		errChan <- err
 		return
 	}
 
-	// fmt.Println("hydrated", itemID, string(body))
-	// fmt.Println("hydrated", itemID)
-	// fmt.Println(itemID, "hydrated")
+	log.Debug("%d hydrated", itemID)
 
 	var item model.Item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
-		fmt.Println("failed unmarshalling item", string(body), err)
+		log.Error("failed unmarshalling item", string(body), err)
 		errChan <- err
 		return
 	}
 
 	itemChan <- item
-	// fmt.Println(itemID, "completed item")
+	log.Debug("%d completed", itemID)
 }

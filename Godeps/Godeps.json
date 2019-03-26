@@ -41,6 +41,10 @@
 			"Rev": "6f77996f0c42f7b84e5a2b252227263f93432e9b"
 		},
 		{
+			"ImportPath": "github.com/op/go-logging",
+			"Rev": "e8d5414f0947014548c2334044a0fac13187dfee"
+		},
+		{
 			"ImportPath": "github.com/sethgrid/pester",
 			"Comment": "1.0.0-2-g68a33a0",
 			"Rev": "68a33a018ad0ac8266f272ec669307a1829c0486"
