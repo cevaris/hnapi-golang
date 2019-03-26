@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/cevaris/hnapi/model"
-	"github.com/sethgrid/pester"
 )
 
 // ItemBackend hydrates Items
@@ -18,15 +19,17 @@ type ItemBackend interface {
 
 // FireBaseItemBackend firebase backed http client
 type FireBaseItemBackend struct {
-	client *pester.Client
+	// client *pester.Client
+	client *http.Client
 }
 
 // NewFireBaseItemBackend constructs a new item repo
 func NewFireBaseItemBackend() ItemBackend {
-	client := pester.New()
-	client.Concurrency = 1
-	client.MaxRetries = 5
-	client.Backoff = pester.ExponentialBackoff
+	// client := pester.New()
+	// client.Concurrency = 1
+	// client.MaxRetries = 5
+	// client.Backoff = pester.ExponentialBackoff
+	var client = &http.Client{Timeout: 10 * time.Second}
 
 	return &FireBaseItemBackend{client: client}
 }

@@ -22,6 +22,7 @@ import (
 )
 
 var log = logging.NewLogger("main")
+
 var itemRepo ItemRepo
 
 func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -30,7 +31,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param", isPrettyJSON)
+	log.Debug("found pretty param %t", isPrettyJSON)
 
 	itemIds, err := hydrateTopItems()
 	if err != nil {
@@ -94,7 +95,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param", isPrettyJSON)
+	log.Debug("found pretty param %t", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -116,7 +117,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	conversation := model.Conversation{ID: itemID}
 	err = hydrateComments(ctx, item.Kids, &comments, &conversation)
 	if err != nil {
-		log.Error("failed hydrating comments", err, "got only", len(comments))
+		log.Error("failed hydrating comments %v got only %d", len(comments))
 	}
 
 	response := model.Items{
@@ -145,7 +146,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param", isPrettyJSON)
+	log.Debug("found pretty param %t", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
@@ -184,21 +185,20 @@ func hydrateTopItems() ([]int, error) {
 	var myClient = &http.Client{Timeout: 10 * time.Second}
 	resp, err := myClient.Get("https://hacker-news.firebaseio.com/v0/topstories.json")
 	if err != nil {
-		log.Error("failed to hydrate items", err)
+		log.Error("failed to hydrate items %v", err)
 		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("failed to read to bytes", err)
+		log.Error("failed to read to bytes %v", err)
 		return nil, err
 	}
-	log.Debug(string(body))
 
 	itemIds := make([]int, 0)
 	jsonErr := json.Unmarshal(body, &itemIds)
 	if jsonErr != nil {
-		log.Error("failed to unmarshall top itemids", err)
+		log.Error("failed to unmarshall top itemids %v", err)
 		return nil, jsonErr
 	}
 	return itemIds, nil

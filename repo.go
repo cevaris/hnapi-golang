@@ -9,6 +9,9 @@ import (
 	"github.com/cevaris/hnapi/model"
 )
 
+// var cacheDurationTTL = time.Minute * time.Duration(10)
+var cacheDurationTTL = time.Second * time.Duration(3)
+
 // ItemRepo hydrate me
 type ItemRepo interface {
 	Get(context.Context, []int) ([]model.Item, error)
@@ -69,7 +72,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 			}
 
 			key := itemCacheKey(r.ID)
-			ttl := int(time.Now().UTC().Add(time.Minute * time.Duration(10)).Unix())
+			ttl := int(time.Now().UTC().Add(cacheDurationTTL).Unix())
 			err := c.cacheBackend.Set(key, &r, ttl)
 			if err != nil {
 				log.Error("failed to write to cache %s %v", key, err)

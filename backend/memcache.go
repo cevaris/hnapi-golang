@@ -21,13 +21,13 @@ func NewMemcacheClient(hostname string) CacheBackend {
 func (m *MemcacheClient) Get(key string, result interface{}) error {
 	cacheItem, err := m.client.Get(key)
 	if err != nil {
-		log.Error("failed fetching", key, err)
+		log.Error("failed fetching %s %v", key, err)
 		return err
 	}
 
 	err = FromBytes(cacheItem.Value, result)
 	if err != nil {
-		log.Error("failed to deserialize memcached data for key", key, err)
+		log.Error("failed to deserialize memcached data for key %s %v", key, err)
 		return err
 	}
 
@@ -38,7 +38,7 @@ func (m *MemcacheClient) Get(key string, result interface{}) error {
 func (m *MemcacheClient) Set(key string, data interface{}, ttl int) error {
 	bytes, err := ToBytes(data)
 	if err != nil {
-		log.Error("failed to serialize memcached data for key", key, data, err)
+		log.Error("failed to serialize memcached data for key %s %v %v", key, data, err)
 		return err
 	}
 

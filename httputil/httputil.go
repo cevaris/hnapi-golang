@@ -35,7 +35,7 @@ func GetBool(r *http.Request, paramName string, defaultValue bool) (bool, error)
 		value, err := strconv.ParseBool(boolValue)
 		if err != nil {
 			msg := fmt.Sprintf("failed to parse '%v' value of the param '%s', expected a boolean", boolValue, paramName)
-			log.Error(msg, err.Error())
+			log.Error("%s %s", msg, err.Error())
 			return false, errors.New(msg)
 		}
 		return value, nil
@@ -50,10 +50,10 @@ func GetInt(ps httprouter.Params, paramName string, defaultValue int) (int, erro
 		value, err := strconv.ParseInt(valueStr, 10, 32)
 		if err != nil {
 			msg := fmt.Sprintf("failed to parse '%v' value of the param '%s', expected a boolean", valueStr, paramName)
-			log.Error(msg, err.Error())
+			log.Error("%s %s", msg, err.Error())
 			return defaultValue, errors.New(msg)
 		}
-		log.Debug("found pretty param", valueStr)
+		log.Debug("found pretty param %s", valueStr)
 		return int(value), nil
 	}
 	return defaultValue, nil
@@ -68,7 +68,7 @@ func GetSlice(r *http.Request, paramName string, defaultValue []int) ([]int, err
 		for _, str := range listOfStrings {
 			num, err := strconv.ParseInt(str, 10, 32)
 			if err != nil {
-				log.Error("failed to parse " + str)
+				log.Error("failed to parse %s", str)
 				return nil, fmt.Errorf("failed to parse '%s', found in %v, expected a list", str, listOfStrings)
 			}
 			slice = append(slice, int(num))
@@ -85,7 +85,7 @@ func SerializeErr(w http.ResponseWriter, err error) {
 	response := APIResponse{Status: "error", Message: err.Error()}
 	b, err := marshal(response, true)
 	if err != nil {
-		log.Error("failed to serialize json ", err, "for", response)
+		log.Error("failed to serialize json %v for %v", err, response)
 		http.Error(w, serverErrorJSON, 500)
 		return
 	}
@@ -97,7 +97,7 @@ func SerializeData(w http.ResponseWriter, data interface{}, isPrettyJSON bool) {
 	response := APIResponse{Status: "ok", Data: data}
 	b, err := marshal(response, isPrettyJSON)
 	if err != nil {
-		log.Error("failed to serialize json ", err, "for", response)
+		log.Error("failed to serialize json %v for %v", err, response)
 		http.Error(w, serverErrorJSON, 500)
 		return
 	}
