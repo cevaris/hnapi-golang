@@ -9,8 +9,9 @@ import (
 	"github.com/cevaris/hnapi/model"
 )
 
-// var cacheDurationTTL = time.Minute * time.Duration(10)
-var cacheDurationTTL = time.Second * time.Duration(3)
+var cacheDurationTTL = time.Minute * time.Duration(10)
+
+// var cacheDurationTTL = time.Second * time.Duration(3)
 
 // ItemRepo hydrate me
 type ItemRepo interface {
@@ -43,7 +44,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 		var item model.Item
 		err := c.cacheBackend.Get(key, &item)
 		if err != nil {
-			log.Error("cache miss %s %v", key, err)
+			log.Debug("cache miss %s %v", key, err)
 			needToHydrateItemIds = append(needToHydrateItemIds, ID)
 		} else {
 			log.Debug("cache hit %s", key)

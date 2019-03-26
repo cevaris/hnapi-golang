@@ -20,7 +20,10 @@ func NewMemcacheClient(hostname string) CacheBackend {
 // Get data from cache
 func (m *MemcacheClient) Get(key string, result interface{}) error {
 	cacheItem, err := m.client.Get(key)
-	if err != nil {
+	if err == memcache.ErrCacheMiss {
+		log.Warning("cache miss %s %v", key, err)
+		return err
+	} else if err != nil {
 		log.Error("failed fetching %s %v", key, err)
 		return err
 	}
