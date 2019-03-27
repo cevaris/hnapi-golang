@@ -1,15 +1,14 @@
-package main
+package backend
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/model"
 )
 
-var cacheDurationTTL = time.Minute * time.Duration(10)
+var cacheDurationTTL = time.Minute * time.Duration(1)
 
 // var cacheDurationTTL = time.Second * time.Duration(3)
 
@@ -20,12 +19,12 @@ type ItemRepo interface {
 
 // CachedItemRepo hydrates and caches Items
 type CachedItemRepo struct {
-	itemBackend  backend.ItemBackend
-	cacheBackend backend.CacheBackend
+	itemBackend  ItemBackend
+	cacheBackend CacheBackend
 }
 
 // NewCachedItemRepo cached backed item repository
-func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.CacheBackend) ItemRepo {
+func NewCachedItemRepo(itemBackend ItemBackend, cacheBackend CacheBackend) ItemRepo {
 	return &CachedItemRepo{
 		itemBackend:  itemBackend,
 		cacheBackend: cacheBackend,
@@ -48,7 +47,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	cacheResultBytes, err := c.cacheBackend.MultiGet(keys)
 	for _, itemBytes := range cacheResultBytes {
 		var result model.Item
-		err = backend.FromBytes(itemBytes, &result)
+		err = FromBytes(itemBytes, &result)
 		if err != nil {
 			log.Error("failed to deserialize %v", err)
 		} else {

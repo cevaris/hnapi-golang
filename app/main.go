@@ -13,27 +13,31 @@ import (
 
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/httputil"
-	"github.com/cevaris/hnapi/logging"
 	"github.com/cevaris/hnapi/model"
 	"github.com/cevaris/httprouter"
+	"google.golang.org/appengine"
 
 	"net/http/pprof"
 	_ "net/http/pprof"
+
+	"google.golang.org/appengine/log"
 )
 
-var log = logging.NewLogger("main")
+// var log = logging.NewLogger("main")
 
-var itemRepo ItemRepo
+var itemRepo backend.ItemRepo
 
 func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	gctx := appengine.NewContext(r)
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
 	if err != nil {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param %t", isPrettyJSON)
 
-	itemIds, err := hydrateTopItems()
+	log.Debugf(gctx, "found pretty param %t", isPrettyJSON)
+
+	itemIds, err := hydrateTopItems(gctx)
 	if err != nil {
 		httputil.SerializeErr(w, errors.New("failed to fetch top item ids"))
 		return
@@ -80,6 +84,7 @@ func hydrateComments(ctx context.Context, commentIds []int, results *[]model.Ite
 }
 
 func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	gctx := appengine.NewContext(r)
 	itemID, err := httputil.GetInt(ps, "ID", -1)
 	if err != nil {
 		httputil.SerializeErr(w, err)
@@ -95,7 +100,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param %t", isPrettyJSON)
+	log.Debugf(gctx, "found pretty param %t", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -117,7 +122,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	conversation := model.Conversation{ID: itemID}
 	err = hydrateComments(ctx, item.Kids, &comments, &conversation)
 	if err != nil {
-		log.Error("failed hydrating comments %v got only %d", len(comments))
+		log.Errorf(gctx, "failed hydrating comments %v got only %d", len(comments))
 	}
 
 	response := model.Items{
@@ -130,6 +135,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	gctx := appengine.NewContext(r)
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
 	if err != nil {
 		httputil.SerializeErr(w, err)
@@ -146,7 +152,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debug("found pretty param %t", isPrettyJSON)
+	log.Debugf(gctx, "found pretty param %t", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
@@ -164,41 +170,24 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	httputil.SerializeData(w, response, isPrettyJSON)
 }
 
-func main() {
-	domain := getenv("DOMAIN", "0.0.0.0")
-	port := os.Getenv("PORT")
-	cacheHostPort := getenv("CACHE_HOST", "localhost:11211")
-
-	itemBackend := backend.NewFireBaseItemBackend()
-	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
-	itemRepo = NewCachedItemRepo(itemBackend, cacheBackend)
-
-	router := httprouter.New()
-	router.GET("/feed/top", topItems)
-	router.GET("/items/:ID", item)
-	router.GET("/items", items)
-	router.GET("/debug/pprof/goroutine", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { pprof.Index(w, r) })
-	http.ListenAndServe(domain+":"+port, router)
-}
-
-func hydrateTopItems() ([]int, error) {
+func hydrateTopItems(gctx context.Context) ([]int, error) {
 	var myClient = &http.Client{Timeout: 10 * time.Second}
 	resp, err := myClient.Get("https://hacker-news.firebaseio.com/v0/topstories.json")
 	if err != nil {
-		log.Error("failed to hydrate items %v", err)
+		log.Errorf(gctx, "failed to hydrate items %v", err)
 		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("failed to read to bytes %v", err)
+		log.Errorf(gctx, "failed to read to bytes %v", err)
 		return nil, err
 	}
 
 	itemIds := make([]int, 0)
 	jsonErr := json.Unmarshal(body, &itemIds)
 	if jsonErr != nil {
-		log.Error("failed to unmarshall top itemids %v", err)
+		log.Errorf(gctx, "failed to unmarshall top itemids %v", err)
 		return nil, jsonErr
 	}
 	return itemIds, nil
@@ -238,4 +227,23 @@ func sortConversationByP(source []*model.Conversation, by []int) []*model.Conver
 func sortItemsByTime(source []model.Item) []model.Item {
 	sort.Slice(source, func(i, j int) bool { return source[i].Time < source[j].Time })
 	return source
+}
+
+func init() {
+	// domain := getenv("DOMAIN", "0.0.0.0")
+	// port := os.Getenv("PORT")
+	cacheHostPort := getenv("CACHE_HOST", "localhost:11211")
+
+	itemBackend := backend.NewFireBaseItemBackend()
+	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
+	itemRepo = backend.NewCachedItemRepo(itemBackend, cacheBackend)
+
+	router := httprouter.New()
+	router.GET("/feed/top", topItems)
+	router.GET("/items/:ID", item)
+	router.GET("/items", items)
+	router.GET("/debug/pprof/goroutine", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { pprof.Index(w, r) })
+	http.Handle("/", router)
+	// http.ListenAndServe(domain+":"+port, router)
+	appengine.Main()
 }

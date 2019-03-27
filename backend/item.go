@@ -73,12 +73,12 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	log.Debug("%d fetching item", itemID)
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
-	defer resp.Body.Close()
 	if err != nil {
 		log.Error("failed making http request", url)
 		errChan <- err
 		return
 	}
+	defer resp.Body.Close()
 	log.Debug("%d fetched items", itemID)
 
 	body, err := ioutil.ReadAll(resp.Body)
