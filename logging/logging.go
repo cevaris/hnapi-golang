@@ -17,8 +17,7 @@ func NewLogger(name string) *logging.Logger {
 	logFormatter := logging.NewBackendFormatter(logBackend, format)
 	logging.SetBackend(logFormatter)
 
-	logging.SetLevel(logging.INFO, name)
-	// logging.SetLevel(logging.DEBUG, name)
+	logging.SetLevel(logging.INFO, "")
 
 	return logger
 }
