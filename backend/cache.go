@@ -8,6 +8,7 @@ import (
 // CacheBackend is the common cache interface
 type CacheBackend interface {
 	Get(string, interface{}) error
+	MultiGet([]string) ([][]byte, error)
 	Set(string, interface{}, int) error
 }
 

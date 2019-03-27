@@ -17,6 +17,24 @@ func NewMemcacheClient(hostname string) CacheBackend {
 	return &MemcacheClient{client: client}
 }
 
+// MultiGet data from cache
+func (m *MemcacheClient) MultiGet(keys []string) ([][]byte, error) {
+	cacheItemMap, err := m.client.GetMulti(keys)
+	if err != nil {
+		log.Error("failed fetching %s %v", keys, err)
+		return nil, err
+	}
+
+	result := make([][]byte, len(cacheItemMap))
+	var i = 0
+	for _, cacheItem := range cacheItemMap {
+		result[i] = cacheItem.Value
+		i++
+	}
+
+	return result, nil
+}
+
 // Get data from cache
 func (m *MemcacheClient) Get(key string, result interface{}) error {
 	cacheItem, err := m.client.Get(key)

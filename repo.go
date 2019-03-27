@@ -36,20 +36,31 @@ func NewCachedItemRepo(itemBackend backend.ItemBackend, cacheBackend backend.Cac
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
 	log.Debug("%v", itemIds)
 	resultItems := make([]model.Item, 0)
-	needToHydrateItemIds := make([]int, 0)
-	// needToHydrateItemIds := itemIds
 
+	needToHydrateItemIdsSet := make(map[int]bool, 0)
+	keys := make([]string, len(itemIds))
 	for _, ID := range itemIds {
-		key := itemCacheKey(ID)
-		var item model.Item
-		err := c.cacheBackend.Get(key, &item)
+		keys = append(keys, itemCacheKey(ID))
+		needToHydrateItemIdsSet[ID] = true
+	}
+	log.Debug("cache keys to lookup %v", keys)
+
+	cacheResultBytes, err := c.cacheBackend.MultiGet(keys)
+	for _, itemBytes := range cacheResultBytes {
+		var result model.Item
+		err = backend.FromBytes(itemBytes, &result)
 		if err != nil {
-			log.Debug("cache miss %s %v", key, err)
-			needToHydrateItemIds = append(needToHydrateItemIds, ID)
+			log.Error("failed to deserialize %v", err)
 		} else {
-			log.Debug("cache hit %s", key)
-			resultItems = append(resultItems, item)
+			log.Debug("cache hit %d", result.ID)
+			resultItems = append(resultItems, result)
+			delete(needToHydrateItemIdsSet, result.ID)
 		}
+	}
+
+	needToHydrateItemIds := make([]int, 0)
+	for ID := range needToHydrateItemIdsSet {
+		needToHydrateItemIds = append(needToHydrateItemIds, ID)
 	}
 
 	itemChan, errChan := c.itemBackend.HydrateItem(ctx, needToHydrateItemIds)
