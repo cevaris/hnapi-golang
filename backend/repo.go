@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cevaris/hnapi/clients"
 	"github.com/cevaris/hnapi/model"
 )
 
@@ -20,11 +21,11 @@ type ItemRepo interface {
 // CachedItemRepo hydrates and caches Items
 type CachedItemRepo struct {
 	itemBackend  ItemBackend
-	cacheBackend CacheBackend
+	cacheBackend clients.CacheClient
 }
 
 // NewCachedItemRepo cached backed item repository
-func NewCachedItemRepo(itemBackend ItemBackend, cacheBackend CacheBackend) ItemRepo {
+func NewCachedItemRepo(itemBackend ItemBackend, cacheBackend clients.CacheClient) ItemRepo {
 	return &CachedItemRepo{
 		itemBackend:  itemBackend,
 		cacheBackend: cacheBackend,
@@ -47,7 +48,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	cacheResultBytes, err := c.cacheBackend.MultiGet(keys)
 	for _, itemBytes := range cacheResultBytes {
 		var result model.Item
-		err = FromBytes(itemBytes, &result)
+		err = clients.FromBytes(itemBytes, &result)
 		if err != nil {
 			log.Error("failed to deserialize %v", err)
 		} else {

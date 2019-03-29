@@ -33,7 +33,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx := appengine.NewContext(r)
 	httpClient := clients.NewGoogleHTTPClient(ctx)
 	itemBackend := backend.NewFireBaseItemBackend(httpClient)
-	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
+	cacheBackend := clients.NewBradfitzMemcacheClient(cacheHostPort)
 	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
 
 	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
@@ -94,7 +94,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx := appengine.NewContext(r)
 	httpClient := clients.NewGoogleHTTPClient(ctx)
 	itemBackend := backend.NewFireBaseItemBackend(httpClient)
-	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
+	cacheBackend := clients.NewBradfitzMemcacheClient(cacheHostPort)
 	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
 
 	itemID, err := httputil.GetInt(ps, "ID", -1)
@@ -150,7 +150,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx := appengine.NewContext(r)
 	httpClient := clients.NewGoogleHTTPClient(ctx)
 	itemBackend := backend.NewFireBaseItemBackend(httpClient)
-	cacheBackend := backend.NewMemcacheClient(cacheHostPort)
+	cacheBackend := clients.NewBradfitzMemcacheClient(cacheHostPort)
 	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
 
 	itemIds, err := httputil.GetSlice(r, "ids", []int{})
