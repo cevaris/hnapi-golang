@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cevaris/hnapi/clients"
+	"github.com/cevaris/hnapi/logging"
 
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/httputil"
@@ -21,11 +22,10 @@ import (
 
 	"net/http/pprof"
 	_ "net/http/pprof"
-
-	"google.golang.org/appengine/log"
 )
 
 // var log = logging.NewLogger("main")
+var log = logging.NewGoogleLogger()
 
 // var itemRepo backend.ItemRepo
 
@@ -42,7 +42,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	log.Debugf(ctx, "found pretty param %t", isPrettyJSON)
+	log.Debug(ctx, "topItems found pretty param", isPrettyJSON)
 
 	itemIds, err := hydrateTopItems(ctx)
 	if err != nil {
@@ -112,7 +112,9 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debugf(ctx, "found pretty param %t", isPrettyJSON)
+	log.Info(ctx, "just log text")
+	log.Info(ctx, "found pretty param", isPrettyJSON)
+	log.Info(ctx, "one", "two", "three")
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -134,7 +136,7 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	conversation := model.Conversation{ID: itemID}
 	err = hydrateComments(ctx, itemRepo, item.Kids, &comments, &conversation)
 	if err != nil {
-		log.Errorf(ctx, "failed hydrating comments %v got only %d", len(comments))
+		log.Error(ctx, "failed hydrating comments, got", len(comments), "of", len(item.Kids))
 	}
 
 	response := model.Items{
@@ -169,7 +171,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		httputil.SerializeErr(w, err)
 		return
 	}
-	log.Debugf(ctx, "found pretty param %t", isPrettyJSON)
+	log.Debug(ctx, "found pretty param", isPrettyJSON)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
@@ -192,20 +194,20 @@ func hydrateTopItems(ctx context.Context) ([]int, error) {
 
 	resp, err := httpClient.Get("https://hacker-news.firebaseio.com/v0/topstories.json")
 	if err != nil {
-		log.Errorf(ctx, "failed to hydrate items %v", err)
+		log.Error(ctx, "failed to hydrate items", err)
 		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf(ctx, "failed to read to bytes %v", err)
+		log.Error(ctx, "failed to read to bytes", err)
 		return nil, err
 	}
 
 	itemIds := make([]int, 0)
 	jsonErr := json.Unmarshal(body, &itemIds)
 	if jsonErr != nil {
-		log.Errorf(ctx, "failed to unmarshall top itemids %v", err)
+		log.Error(ctx, "failed to unmarshall top itemids", err)
 		return nil, jsonErr
 	}
 	return itemIds, nil
