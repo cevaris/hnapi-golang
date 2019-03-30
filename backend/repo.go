@@ -45,7 +45,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	}
 	log.Debug("cache keys to lookup %v", keys)
 
-	cacheResultBytes, err := c.cacheBackend.MultiGet(keys)
+	cacheResultBytes, err := c.cacheBackend.MultiGet(ctx, keys)
 	for _, itemBytes := range cacheResultBytes {
 		var result model.Item
 		err = clients.FromBytes(itemBytes, &result)
@@ -84,8 +84,7 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 			}
 
 			key := itemCacheKey(r.ID)
-			ttl := int(time.Now().UTC().Add(cacheDurationTTL).Unix())
-			err := c.cacheBackend.Set(key, &r, ttl)
+			err := c.cacheBackend.Set(ctx, key, &r, cacheDurationTTL)
 			if err != nil {
 				log.Error("failed to write to cache %s %v", key, err)
 			} else {
