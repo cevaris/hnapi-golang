@@ -50,9 +50,6 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-
 	items, err := itemRepo.Get(ctx, itemIds)
 	if err != nil {
 		httputil.SerializeErr(w, err)
@@ -173,7 +170,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	log.Debug(ctx, "found pretty param", isPrettyJSON)
 
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	items, err := itemRepo.Get(ctx, itemIds)
@@ -249,12 +246,9 @@ func sortItemsByTime(source []model.Item) []model.Item {
 	return source
 }
 
-var cacheHostPort string
-
 func init() {
 	// domain := getenv("DOMAIN", "0.0.0.0")
 	// port := os.Getenv("PORT")
-	cacheHostPort = getenv("CACHE_HOST", "localhost:11211")
 
 	router := httprouter.New()
 	router.GET("/feed/top", topItems)

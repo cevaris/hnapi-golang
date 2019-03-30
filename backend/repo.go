@@ -34,25 +34,27 @@ func NewCachedItemRepo(itemBackend ItemBackend, cacheBackend clients.CacheClient
 
 // Get cached items
 func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, error) {
-	log.Debug("%v", itemIds)
+	log.Debug(ctx, itemIds)
+	log.Info(ctx, "number of items to lookup", len(itemIds))
 	resultItems := make([]model.Item, 0)
 
 	needToHydrateItemIdsSet := make(map[int]bool, 0)
-	keys := make([]string, len(itemIds))
+	keys := make([]string, 0)
 	for _, ID := range itemIds {
 		keys = append(keys, itemCacheKey(ID))
 		needToHydrateItemIdsSet[ID] = true
 	}
-	log.Debug("cache keys to lookup %v", keys)
+	log.Debug(ctx, "cache keys to lookup", keys)
+	log.Info(ctx, "cache keys to lookup", len(keys))
 
 	cacheResultBytes, err := c.cacheBackend.MultiGet(ctx, keys)
 	for _, itemBytes := range cacheResultBytes {
 		var result model.Item
 		err = clients.FromBytes(itemBytes, &result)
 		if err != nil {
-			log.Error("failed to deserialize %v", err)
+			log.Error(ctx, "failed to deserialize", err)
 		} else {
-			log.Debug("cache hit %d", result.ID)
+			log.Info(ctx, "cache hit", result.ID)
 			resultItems = append(resultItems, result)
 			delete(needToHydrateItemIdsSet, result.ID)
 		}
@@ -67,28 +69,29 @@ func (c *CachedItemRepo) Get(ctx context.Context, itemIds []int) ([]model.Item, 
 	defer close(itemChan)
 	defer close(errChan)
 
-	log.Debug("items still needed to hydrate %v", needToHydrateItemIds)
+	log.Debug(ctx, "items still needed to hydrate", needToHydrateItemIds)
+	log.Info(ctx, "items still needed to hydrate", len(needToHydrateItemIds))
 	for range needToHydrateItemIds {
 		select {
 		case err, ok := <-errChan:
 			if err == context.Canceled {
-				log.Error("hydrate item was cancelled: %v %t", err, ok)
+				log.Error(ctx, "hydrate item was cancelled", err, ok)
 				continue
 			}
-			log.Error("failed to hydrate item %v %t", err, ok)
+			log.Error(ctx, "failed to hydrate item", err, ok)
 
 		case r, ok := <-itemChan:
 			if !ok {
-				log.Debug("should not happen %v", r)
+				log.Debug(ctx, "should not happen", r)
 				continue
 			}
 
 			key := itemCacheKey(r.ID)
 			err := c.cacheBackend.Set(ctx, key, &r, cacheDurationTTL)
 			if err != nil {
-				log.Error("failed to write to cache %s %v", key, err)
+				log.Error(ctx, "failed to write to cache", key, err)
 			} else {
-				log.Debug("wrote to cache %s", key)
+				log.Debug(ctx, "wrote to cache", key)
 			}
 
 			resultItems = append(resultItems, r)

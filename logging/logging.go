@@ -9,6 +9,18 @@ import (
 	glog "google.golang.org/appengine/log"
 )
 
+const (
+	// Debug logs debug mode
+	Debug = iota
+	// Info logs info mode
+	Info = iota
+	// Error logs error mode
+	Error = iota
+)
+
+// Level is the global logging level
+const Level int = Info
+
 // Logger is a generic logger
 type Logger interface {
 	Info(context.Context, ...interface{})
@@ -28,7 +40,17 @@ func NewLogger(name string) *logging.Logger {
 	logging.SetBackend(logFormatter)
 
 	// logging.SetLevel(logging.INFO, "")
-	logging.SetLevel(logging.DEBUG, "")
+	switch Level {
+	case Info:
+		logging.SetLevel(logging.INFO, "")
+		break
+	case Error:
+		logging.SetLevel(logging.ERROR, "")
+		break
+	default:
+		// defaulting to debug
+		logging.SetLevel(logging.DEBUG, "")
+	}
 
 	return logger
 }
@@ -42,14 +64,20 @@ func NewGoogleLogger() Logger {
 }
 
 func (l *googleLoggger) Info(ctx context.Context, m ...interface{}) {
-	glog.Infof(ctx, strings.Repeat("%v ", len(m)), m...)
+	if Level == Info || Level == Error {
+		glog.Infof(ctx, strings.Repeat("%v ", len(m)), m...)
+	}
 }
 
 func (l *googleLoggger) Error(ctx context.Context, m ...interface{}) {
+	// always log errors
 	glog.Errorf(ctx, strings.Repeat("%v ", len(m)), m...)
 }
+
 func (l *googleLoggger) Debug(ctx context.Context, m ...interface{}) {
-	glog.Debugf(ctx, strings.Repeat("%v ", len(m)), m...)
+	if Level == Debug {
+		glog.Debugf(ctx, strings.Repeat("%v ", len(m)), m...)
+	}
 }
 
 type opLogger struct {

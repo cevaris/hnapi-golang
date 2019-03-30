@@ -13,7 +13,7 @@ import (
 
 // User proto for serialization https://stackoverflow.com/questions/37618399/efficient-go-serialization-of-struct-to-disk
 
-var log = logging.NewLogger("memcache")
+var log = logging.NewGoogleLogger()
 
 // CacheClient is the common cache interface
 type CacheClient interface {
@@ -51,12 +51,13 @@ func NewGoogleMemcacheClient() CacheClient {
 func (m *googleMemcacheClient) MultiGet(ctx context.Context, keys []string) ([][]byte, error) {
 	cacheItemMap, err := gmemcache.GetMulti(ctx, keys)
 	if err != nil {
-		log.Error("failed fetching %s %v", keys, err)
+		log.Error(ctx, "failed fetching", keys, err)
 		return nil, err
 	}
 
 	result := make([][]byte, len(cacheItemMap))
 	var i = 0
+	log.Info(ctx, "cache lookup found", len(cacheItemMap), "of", len(keys))
 	for _, cacheItem := range cacheItemMap {
 		result[i] = cacheItem.Value
 		i++
@@ -69,16 +70,16 @@ func (m *googleMemcacheClient) MultiGet(ctx context.Context, keys []string) ([][
 func (m *googleMemcacheClient) Get(ctx context.Context, key string, result interface{}) error {
 	cacheItem, err := gmemcache.Get(ctx, key)
 	if err == bmemcache.ErrCacheMiss {
-		log.Warning("cache miss %s %v", key, err)
+		log.Debug(ctx, "cache miss", key, err)
 		return err
 	} else if err != nil {
-		log.Error("failed fetching %s %v", key, err)
+		log.Error(ctx, "failed fetching", key, err)
 		return err
 	}
 
 	err = FromBytes(cacheItem.Value, result)
 	if err != nil {
-		log.Error("failed to deserialize memcached data for key %s %v", key, err)
+		log.Error(ctx, "failed to deserialize memcached data for key", key, err)
 		return err
 	}
 
@@ -89,7 +90,7 @@ func (m *googleMemcacheClient) Get(ctx context.Context, key string, result inter
 func (m *googleMemcacheClient) Set(ctx context.Context, key string, data interface{}, ttl time.Duration) error {
 	bytes, err := ToBytes(data)
 	if err != nil {
-		log.Error("failed to serialize memcached data for key %s %v %v", key, data, err)
+		log.Error(ctx, "failed to serialize memcached data for key", key, data, err)
 		return err
 	}
 
@@ -116,7 +117,7 @@ func NewBradfitzMemcacheClient(hostname string) CacheClient {
 func (m *bradfitzMemcacheClient) MultiGet(ctx context.Context, keys []string) ([][]byte, error) {
 	cacheItemMap, err := m.client.GetMulti(keys)
 	if err != nil {
-		log.Error("failed fetching %s %v", keys, err)
+		log.Error(ctx, "failed fetching", keys, err)
 		return nil, err
 	}
 
@@ -134,16 +135,16 @@ func (m *bradfitzMemcacheClient) MultiGet(ctx context.Context, keys []string) ([
 func (m *bradfitzMemcacheClient) Get(ctx context.Context, key string, result interface{}) error {
 	cacheItem, err := m.client.Get(key)
 	if err == bmemcache.ErrCacheMiss {
-		log.Warning("cache miss %s %v", key, err)
+		log.Debug(ctx, "cache miss", key, err)
 		return err
 	} else if err != nil {
-		log.Error("failed fetching %s %v", key, err)
+		log.Error(ctx, "failed fetching", key, err)
 		return err
 	}
 
 	err = FromBytes(cacheItem.Value, result)
 	if err != nil {
-		log.Error("failed to deserialize memcached data for key %s %v", key, err)
+		log.Error(ctx, "failed to deserialize memcached data for key", key, err)
 		return err
 	}
 
@@ -154,7 +155,7 @@ func (m *bradfitzMemcacheClient) Get(ctx context.Context, key string, result int
 func (m *bradfitzMemcacheClient) Set(ctx context.Context, key string, data interface{}, ttl time.Duration) error {
 	bytes, err := ToBytes(data)
 	if err != nil {
-		log.Error("failed to serialize memcached data for key %s %v %v", key, data, err)
+		log.Error(ctx, "failed to serialize memcached data for key", key, data, err)
 		return err
 	}
 

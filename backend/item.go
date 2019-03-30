@@ -53,7 +53,7 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
-		log.Debug("processing=%d goroutines=%d", len(sem), runtime.NumGoroutine())
+		log.Debug(ctx, "processing=", len(sem), "goroutines=", runtime.NumGoroutine())
 		incr()
 		go f.asyncHydrate(ctx, itemID, itemChan, errChan)
 	}
@@ -70,34 +70,34 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	default:
 	}
 
-	log.Debug("%d fetching item", itemID)
+	log.Debug(ctx, itemID, "fetching item")
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
 	if err != nil {
-		log.Error("failed making http request", url)
+		log.Error(ctx, "failed making http request", url)
 		errChan <- err
 		return
 	}
 	defer resp.Body.Close()
-	log.Debug("%d fetched items", itemID)
+	log.Debug(ctx, itemID, "fetched items")
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("failed reading http response", itemID)
+		log.Error(ctx, itemID, "failed reading http response")
 		errChan <- err
 		return
 	}
 
-	log.Debug("%d hydrated", itemID)
+	log.Debug(ctx, itemID, "hydrated")
 
 	var item model.Item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
-		log.Error("failed unmarshalling item", string(body), err)
+		log.Error(ctx, "failed unmarshalling item", string(body), err)
 		errChan <- err
 		return
 	}
 
 	itemChan <- item
-	log.Debug("%d completed", itemID)
+	log.Debug(ctx, itemID, "completed")
 }
