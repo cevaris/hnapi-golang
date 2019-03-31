@@ -7,15 +7,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sort"
 	"time"
 
+	"github.com/cevaris/hnapi/api"
 	"github.com/cevaris/hnapi/clients"
 	"github.com/cevaris/hnapi/logging"
 
 	"github.com/cevaris/hnapi/backend"
-	"github.com/cevaris/hnapi/httputil"
 	"github.com/cevaris/hnapi/model"
 	"github.com/cevaris/httprouter"
 	"google.golang.org/appengine"
@@ -27,18 +26,20 @@ import (
 // var log = logging.NewLogger("main")
 var log = logging.NewGoogleLogger()
 
-// var itemRepo backend.ItemRepo
-
-func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	ctx := appengine.NewContext(r)
+func newItemRepo(ctx context.Context) backend.ItemRepo {
 	httpClient := clients.NewGoogleHTTPClient(ctx)
 	itemBackend := backend.NewFireBaseItemBackend(httpClient)
 	cacheBackend := clients.NewGoogleMemcacheClient()
 	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
+	return itemRepo
+}
+func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	ctx := appengine.NewContext(r)
+	itemRepo := newItemRepo(ctx)
 
-	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
+	isPrettyJSON, err := api.GetBool(ctx, r, "pretty", false)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 
@@ -46,13 +47,13 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	itemIds, err := hydrateTopItems(ctx)
 	if err != nil {
-		httputil.SerializeErr(w, errors.New("failed to fetch top item ids"))
+		api.SerializeErr(ctx, w, errors.New("failed to fetch top item ids"))
 		return
 	}
 
 	items, err := itemRepo.Get(ctx, itemIds)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 
@@ -60,7 +61,7 @@ func topItems(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		Items: sortItemsBy(items, itemIds),
 	}
 
-	httputil.SerializeData(w, response, isPrettyJSON)
+	api.SerializeData(ctx, w, response, isPrettyJSON)
 }
 
 func hydrateComments(ctx context.Context, itemRepo backend.ItemRepo, commentIds []int, results *[]model.Item, conversation *model.Conversation) error {
@@ -88,25 +89,22 @@ func hydrateComments(ctx context.Context, itemRepo backend.ItemRepo, commentIds 
 }
 
 func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var ctx = appengine.NewContext(r)
-	httpClient := clients.NewGoogleHTTPClient(ctx)
-	itemBackend := backend.NewFireBaseItemBackend(httpClient)
-	cacheBackend := clients.NewGoogleMemcacheClient()
-	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
+	ctx := appengine.NewContext(r)
+	itemRepo := newItemRepo(ctx)
 
-	itemID, err := httputil.GetInt(ps, "ID", -1)
+	itemID, err := api.GetInt(ctx, ps, "ID", -1)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 	if itemID == -1 {
-		httputil.SerializeErr(w, errors.New("missing parameter ':id'"))
+		api.SerializeErr(ctx, w, errors.New("missing parameter ':id'"))
 		return
 	}
 
-	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
+	isPrettyJSON, err := api.GetBool(ctx, r, "pretty", false)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 	log.Info(ctx, "just log text")
@@ -118,13 +116,13 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	items, err := itemRepo.Get(ctx, []int{itemID})
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 
 	var item model.Item
 	if len(items) == 0 {
-		httputil.SerializeErr(w, fmt.Errorf("failed to hydrate %d", itemID))
+		api.SerializeErr(ctx, w, fmt.Errorf("failed to hydrate %d", itemID))
 		return
 	}
 	item = items[0]
@@ -143,30 +141,27 @@ func item(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		Comments:     sortItemsByTime(comments),
 	}
 
-	httputil.SerializeData(w, response, isPrettyJSON)
+	api.SerializeData(ctx, w, response, isPrettyJSON)
 }
 
 func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ctx := appengine.NewContext(r)
-	httpClient := clients.NewGoogleHTTPClient(ctx)
-	itemBackend := backend.NewFireBaseItemBackend(httpClient)
-	cacheBackend := clients.NewGoogleMemcacheClient()
-	itemRepo := backend.NewCachedItemRepo(itemBackend, cacheBackend)
+	itemRepo := newItemRepo(ctx)
 
-	itemIds, err := httputil.GetSlice(r, "ids", []int{})
+	itemIds, err := api.GetSlice(ctx, r, "ids", []int{})
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 
 	if len(itemIds) == 0 {
-		httputil.SerializeErr(w, errors.New("missing 'ids' parameter or values"))
+		api.SerializeErr(ctx, w, errors.New("missing 'ids' parameter or values"))
 		return
 	}
 
-	isPrettyJSON, err := httputil.GetBool(r, "pretty", false)
+	isPrettyJSON, err := api.GetBool(ctx, r, "pretty", false)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 	log.Debug(ctx, "found pretty param", isPrettyJSON)
@@ -176,7 +171,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	items, err := itemRepo.Get(ctx, itemIds)
 	if err != nil {
-		httputil.SerializeErr(w, err)
+		api.SerializeErr(ctx, w, err)
 		return
 	}
 
@@ -184,7 +179,7 @@ func items(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		Items: sortItemsBy(items, itemIds),
 	}
 
-	httputil.SerializeData(w, response, isPrettyJSON)
+	api.SerializeData(ctx, w, response, isPrettyJSON)
 }
 
 func hydrateTopItems(ctx context.Context) ([]int, error) {
@@ -209,13 +204,6 @@ func hydrateTopItems(ctx context.Context) ([]int, error) {
 		return nil, jsonErr
 	}
 	return itemIds, nil
-}
-
-func getenv(key, orElse string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return orElse
 }
 
 func sortItemsBy(source []model.Item, by []int) []model.Item {
