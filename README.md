@@ -11,8 +11,19 @@
 - [Golang collection operations](https://gobyexample.com/collection-functions)
 - [HN 1400+ Comments](https://news.ycombinator.com/item?id=13682022)
 - [Golang HTTP prof debugging](https://golang.org/pkg/net/http/pprof/)
+- [Golang GAE Logging](https://cloud.google.com/appengine/docs/standard/go/logs/)
+- [Golang GAE context seeding](https://github.com/CaptainCodeman/appengine-context/blob/master/context.go)
+- [Golang GAE http client](https://cloud.google.com/appengine/docs/standard/go/issue-requests)
+- [Golang GAE memcached](https://cloud.google.com/appengine/docs/standard/go/memcache/using)
 
 Running locally
 
-`DOMAIN=localhost gin run main.go`
+- `dev_appserver.py app`
 
+
+Debugging Goroutines
+- http://localhost:8080/debug/pprof/goroutine?debug=1
+
+
+Deploying
+- `gcloud app deploy app/app.yaml`

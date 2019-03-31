@@ -23,7 +23,7 @@ type Item struct {
 	Poll  int   `json:"poll,omitempty"`
 	Parts []int `json:"parts,omitempty"`
 
-	Decendants int   `json:"decendants,omitempty"`
+	Decendants int   `json:"descendants,omitempty"`
 	Kids       []int `json:"kids,omitempty"`
 
 	URL   string `json:"url,omitempty"`

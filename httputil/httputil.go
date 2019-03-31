@@ -102,6 +102,7 @@ func SerializeData(w http.ResponseWriter, data interface{}, isPrettyJSON bool) {
 		return
 	}
 	w.Write(b)
+	w.Header().Set("Content-Type", "application/json")
 }
 
 func marshal(data interface{}, prettyJSON bool) ([]byte, error) {

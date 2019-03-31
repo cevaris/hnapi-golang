@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"runtime"
-	"time"
 
+	"github.com/cevaris/hnapi/clients"
 	"github.com/cevaris/hnapi/model"
 )
 
@@ -20,22 +19,23 @@ type ItemBackend interface {
 // FireBaseItemBackend firebase backed http client
 type FireBaseItemBackend struct {
 	// client *pester.Client
-	client *http.Client
+	// client *http.Client
+	client clients.HTTPClient
 }
 
 // NewFireBaseItemBackend constructs a new item repo
-func NewFireBaseItemBackend() ItemBackend {
+func NewFireBaseItemBackend(httpClient clients.HTTPClient) ItemBackend {
 	// client := pester.New()
 	// client.Concurrency = 1
 	// client.MaxRetries = 5
 	// client.Backoff = pester.ExponentialBackoff
-	var client = &http.Client{Timeout: 10 * time.Second}
-
-	return &FireBaseItemBackend{client: client}
+	// var client = urlfetch.Client(ctx) // &http.Client{Timeout: 10 * time.Second}
+	return &FireBaseItemBackend{client: httpClient}
 }
 
 // MAX http requests
-const MAX = 25
+// TODO move this outside of the backend, into a global helper method and pass into NewFireBaseItemBackend
+const MAX = 30
 
 var sem = make(chan int, MAX)
 
@@ -53,7 +53,7 @@ func (f *FireBaseItemBackend) HydrateItem(ctx context.Context, itemIds []int) (c
 	errChan := make(chan error, len(itemIds))
 
 	for _, itemID := range itemIds {
-		log.Debug("processing=%d goroutines=%d", len(sem), runtime.NumGoroutine())
+		log.Info(ctx, fmt.Sprintf("processing=%d goroutines=%d", len(sem), runtime.NumGoroutine()))
 		incr()
 		go f.asyncHydrate(ctx, itemID, itemChan, errChan)
 	}
@@ -70,34 +70,34 @@ func (f *FireBaseItemBackend) asyncHydrate(ctx context.Context, itemID int, item
 	default:
 	}
 
-	log.Debug("%d fetching item", itemID)
+	log.Debug(ctx, itemID, "fetching item")
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?print=pretty", itemID)
 	resp, err := f.client.Get(url)
-	defer resp.Body.Close()
 	if err != nil {
-		log.Error("failed making http request", url)
+		log.Error(ctx, "failed making http request", url)
 		errChan <- err
 		return
 	}
-	log.Debug("%d fetched items", itemID)
+	defer resp.Body.Close()
+	log.Debug(ctx, itemID, "fetched items")
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("failed reading http response", itemID)
+		log.Error(ctx, itemID, "failed reading http response")
 		errChan <- err
 		return
 	}
 
-	log.Debug("%d hydrated", itemID)
+	log.Debug(ctx, itemID, "hydrated")
 
 	var item model.Item
 	err = json.Unmarshal(body, &item)
 	if err != nil {
-		log.Error("failed unmarshalling item", string(body), err)
+		log.Error(ctx, "failed unmarshalling item", string(body), err)
 		errChan <- err
 		return
 	}
 
 	itemChan <- item
-	log.Debug("%d completed", itemID)
+	log.Debug(ctx, itemID, "completed")
 }
