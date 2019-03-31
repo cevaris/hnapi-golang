@@ -23,7 +23,6 @@ import (
 	_ "net/http/pprof"
 )
 
-// var log = logging.NewLogger("main")
 var log = logging.NewGoogleLogger()
 
 func newItemRepo(ctx context.Context) backend.ItemRepo {
@@ -236,15 +235,11 @@ func sortItemsByTime(source []model.Item) []model.Item {
 }
 
 func init() {
-	// domain := getenv("DOMAIN", "0.0.0.0")
-	// port := os.Getenv("PORT")
-
 	router := httprouter.New()
 	router.GET("/feed/top", topItems)
 	router.GET("/items/:ID", item)
 	router.GET("/items", items)
 	router.GET("/debug/pprof/goroutine", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) { pprof.Index(w, r) })
 	http.Handle("/", router)
-	// http.ListenAndServe(domain+":"+port, router)
 	appengine.Main()
 }

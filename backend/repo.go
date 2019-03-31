@@ -9,9 +9,7 @@ import (
 	"github.com/cevaris/hnapi/model"
 )
 
-var cacheDurationTTL = time.Minute * time.Duration(1)
-
-// var cacheDurationTTL = time.Second * time.Duration(3)
+var cacheDurationTTL = time.Minute * time.Duration(5)
 
 // ItemRepo hydrate me
 type ItemRepo interface {
