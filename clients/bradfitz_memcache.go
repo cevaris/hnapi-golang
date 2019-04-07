@@ -1,13 +1,20 @@
 package clients
 
+import (
+	"context"
+	"time"
+
+	"github.com/bradfitz/gomemcache/memcache"
+)
+
 // MemcacheClient blah
 type bradfitzMemcacheClient struct {
-	client *bmemcache.Client
+	client *memcache.Client
 }
 
 // NewBradfitzMemcacheClient new client
 func NewBradfitzMemcacheClient(hostname string) CacheClient {
-	client := bmemcache.New(hostname)
+	client := memcache.New(hostname)
 	return &bradfitzMemcacheClient{client: client}
 }
 
@@ -32,7 +39,7 @@ func (m *bradfitzMemcacheClient) MultiGet(ctx context.Context, keys []string) ([
 // Get data from cache
 func (m *bradfitzMemcacheClient) Get(ctx context.Context, key string, result interface{}) error {
 	cacheItem, err := m.client.Get(key)
-	if err == bmemcache.ErrCacheMiss {
+	if err == memcache.ErrCacheMiss {
 		log.Debug(ctx, "cache miss", key, err)
 		return err
 	} else if err != nil {
@@ -57,7 +64,7 @@ func (m *bradfitzMemcacheClient) Set(ctx context.Context, key string, data inter
 		return err
 	}
 
-	item := bmemcache.Item{
+	item := memcache.Item{
 		Key:        key,
 		Value:      bytes,
 		Expiration: int32(ttl),

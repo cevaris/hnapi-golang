@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cevaris/hnapi/logging"
 	"github.com/cevaris/httprouter"
+	"github.com/cevaris/timber"
 )
 
-var log = logging.NewGoogleLogger()
+var log = timber.NewGoogleLogger()
 
 var serverError = Response{
 	Status:  "error",

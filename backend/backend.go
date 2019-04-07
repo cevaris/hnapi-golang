@@ -1,6 +1,6 @@
 package backend
 
-import "github.com/cevaris/hnapi/logging"
+import "github.com/cevaris/timber"
 
 // var log = logging.NewLogger("backend")
-var log = logging.NewGoogleLogger()
+var log = timber.NewGoogleLogger()

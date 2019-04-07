@@ -12,7 +12,7 @@ import (
 
 	"github.com/cevaris/hnapi/api"
 	"github.com/cevaris/hnapi/clients"
-	"github.com/cevaris/hnapi/logging"
+	"github.com/cevaris/timber"
 
 	"github.com/cevaris/hnapi/backend"
 	"github.com/cevaris/hnapi/model"
@@ -23,7 +23,7 @@ import (
 	_ "net/http/pprof"
 )
 
-var log = logging.NewGoogleLogger()
+var log = timber.NewGoogleLogger()
 
 func newItemRepo(ctx context.Context) backend.ItemRepo {
 	httpClient := clients.NewGoogleHTTPClient(ctx)

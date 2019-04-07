@@ -6,12 +6,12 @@ import (
 	"encoding/gob"
 	"time"
 
-	"github.com/cevaris/hnapi/logging"
+	"github.com/cevaris/timber"
 )
 
 // User proto for serialization https://stackoverflow.com/questions/37618399/efficient-go-serialization-of-struct-to-disk
 
-var log = logging.NewGoogleLogger()
+var log = timber.NewGoogleLogger()
 
 // CacheClient is the common cache interface
 type CacheClient interface {
